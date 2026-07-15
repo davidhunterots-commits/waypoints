@@ -40,71 +40,36 @@
 
   /* Header */
   header.hero{
-    background:var(--turquoise);
+    position:relative;
     border:3px solid var(--ink);
     border-radius:10px;
-    padding:30px 28px 24px;
-    position:relative;
-    margin-bottom:22px;
     overflow:hidden;
-    box-shadow: 6px 6px 0 var(--ink);
+    margin-bottom:20px;
+    box-shadow: 7px 7px 0 var(--ink);
+    line-height:0;
   }
-  header.hero::before{
-    content:"";
-    position:absolute;
-    top:50%; right:-40px;
-    width:280px; height:280px;
-    transform:translateY(-50%);
-    border-radius:50%;
-    background: repeating-conic-gradient(from 0deg, rgba(232,163,61,0.55) 0deg 9deg, transparent 9deg 18deg);
-    pointer-events:none;
+  .hero-image{ display:block; width:100%; height:auto; }
+  .hero-sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
-  .hero-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; position:relative; z-index:1;}
-  .eyebrow{
-    font-family:'Space Mono', monospace;
-    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
-    color:var(--cream); font-weight:700;
-    background:var(--coral);
-    display:inline-block;
-    padding:3px 10px;
-    border-radius:3px;
-    border:1.5px solid var(--ink);
+  @keyframes spin-slow{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  .flight-path{
+    position:absolute; inset:0; width:100%; height:100%;
+    pointer-events:none; z-index:1; opacity:0.8;
   }
-  h1{
-    font-family:'Alfa Slab One', serif;
-    font-weight:400;
-    font-size:52px;
-    line-height:1;
-    margin:12px 0 8px;
-    color:var(--cream);
-    text-shadow: 3px 3px 0 var(--coral);
-    letter-spacing:-0.01em;
-  }
-  .hero-sub{ font-size:14.5px; color:var(--cream); max-width:44ch; opacity:0.92; font-weight:500;}
-  .stamp{
-    font-family:'Space Mono', monospace;
-    font-weight:700;
-    font-size:11px;
-    color:var(--turquoise-dark);
-    background:var(--cream);
-    border:2.5px solid var(--ink);
-    border-radius:50%;
-    width:82px;height:82px;
-    display:flex; align-items:center; justify-content:center;
-    text-align:center;
-    transform:rotate(9deg);
-    line-height:1.3;
-    flex-shrink:0;
-    padding:6px;
-    position:relative; z-index:1;
+  @keyframes plane-fly{ from{ stroke-dashoffset:24; } to{ stroke-dashoffset:0; } }
+  .flight-path path{
+    animation: plane-fly 1.2s linear infinite;
   }
   .hero-stats{
-    display:flex; gap:14px; margin-top:20px; flex-wrap:wrap; position:relative; z-index:1;
+    display:flex; gap:14px; flex-wrap:wrap; margin: 18px 0 22px;
   }
   .hero-stats div{
     font-family:'Space Mono', monospace;
-    font-size:11px; color:var(--ink); background:var(--cream);
+    font-size:11px; color:var(--ink); background:#FFFDF6;
     border:2px solid var(--ink); border-radius:6px; padding:8px 14px;
+    box-shadow: 3px 3px 0 var(--chrome);
   }
   .hero-stats b{ display:block; font-size:22px; color:var(--coral); font-family:'Alfa Slab One',serif; font-weight:400; }
 
@@ -117,6 +82,11 @@
     padding:4px 10px; display:inline-flex; align-items:center; gap:6px;
   }
   .traveler-chip button{ background:none; border:none; cursor:pointer; color:var(--coral); font-weight:700; padding:0; font-size:11px; }
+  .traveler-checklist{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+  .traveler-check-row{
+    display:flex; align-items:center; gap:8px; font-family:'Poppins',sans-serif; font-size:13.5px;
+  }
+  .traveler-check-row input[type=checkbox]{ width:18px; height:18px; accent-color:var(--turquoise); }
 
   /* Controls */
   .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px; }
@@ -210,13 +180,14 @@
   /* City header — postcard banner style */
   .city-group{ margin-bottom:30px; }
   .city-heading{
-    display:inline-flex; align-items:baseline; gap:10px;
+    display:inline-flex; flex-direction:column; align-items:flex-start; gap:4px;
     padding:9px 22px;
     border-radius:6px 6px 0 0;
     border:2.5px solid var(--ink);
     border-bottom:none;
     position:relative;
   }
+  .city-meta{ display:flex; align-items:center; gap:8px; }
   .city-heading h3{
     font-family:'Alfa Slab One', serif; font-weight:400; font-size:22px; margin:0;
     letter-spacing:0.01em;
@@ -301,25 +272,28 @@
 <div class="wrap">
 
   <header class="hero">
-    <div class="hero-top">
-      <div>
-        <div class="eyebrow">Shared Log · Est. 2026</div>
-        <h1>Waypoints</h1>
-        <div class="hero-sub">Places we've found, places we're chasing. One list, every traveler.</div>
-      </div>
-      <div class="stamp">TRAVEL<br>LOG<br>✦</div>
-    </div>
-    <div class="hero-stats">
-      <div><b id="stat-total">0</b>logged</div>
-      <div><b id="stat-visited">0</b>visited</div>
-      <div><b id="stat-want">0</b>want to go</div>
-    </div>
+    <img class="hero-image" src="header.png" alt="Waypoints — Shared Log, Est. 2026. Places we've found, places we're chasing. One list, every traveler.">
+    <h1 class="hero-sr-only">Waypoints</h1>
+    <div class="hero-sr-only">Shared Log · Est. 2026. Places we've found, places we're chasing. One list, every traveler.</div>
+    <svg class="flight-path" viewBox="0 0 1600 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 960 340 L 1430 210" fill="none" stroke="#136158" stroke-width="3" stroke-dasharray="1 14" stroke-linecap="round" opacity="0.6"/>
+      <g transform="translate(1444,206) rotate(-16)">
+        <path d="M 20 0 L -13 11 L -4 0 L -13 -11 Z" fill="#136158" stroke="#2B2620" stroke-width="1.3" stroke-linejoin="round" opacity="0.85"/>
+      </g>
+    </svg>
   </header>
+
+  <div class="hero-stats">
+    <div><b id="stat-total">0</b>logged</div>
+    <div><b id="stat-visited">0</b>visited</div>
+    <div><b id="stat-want">0</b>want to go</div>
+  </div>
 
   <div class="trip-bar">
     <div class="tabs" id="trip-tabs"></div>
     <button class="btn-secondary" onclick="openTripModal()">+ New trip</button>
     <button class="btn-secondary" id="manage-travelers-btn" onclick="openTripModal(getCurrentTrip())">✎ Manage travelers</button>
+    <button class="btn-secondary" onclick="openTravelersModal()">👥 All travelers</button>
   </div>
   <div class="traveler-row" id="traveler-row"></div>
 
@@ -414,12 +388,9 @@
     <label>Trip name</label>
     <input type="text" id="trip-name" placeholder="e.g. Italy 2026">
 
-    <label>Travelers</label>
-    <div style="display:flex; gap:6px;">
-      <input type="text" id="traveler-input" placeholder="Add a traveler's name" onkeydown="if(event.key==='Enter'){event.preventDefault(); addTravelerChip();}">
-      <button type="button" class="btn-secondary" onclick="addTravelerChip()">Add</button>
-    </div>
-    <div class="traveler-row" id="traveler-chips" style="margin-top:10px; margin-bottom:0;"></div>
+    <label>Travelers on this trip</label>
+    <div class="traveler-checklist" id="trip-traveler-checklist"></div>
+    <div class="field-hint" style="text-transform:none">Need to add someone new? Use "👥 All travelers" first, then check them off here.</div>
 
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeTripModal()">Cancel</button>
@@ -429,16 +400,43 @@
   </div>
 </div>
 
+<div class="overlay" id="travelers-overlay">
+  <div class="modal">
+    <h2>All travelers</h2>
+    <div class="field-hint" style="text-transform:none; margin-bottom:8px;">This is your shared roster — add someone once, then check them onto any trip.</div>
+    <div style="display:flex; gap:6px;">
+      <input type="text" id="global-traveler-input" placeholder="Add a traveler's name" onkeydown="if(event.key==='Enter'){event.preventDefault(); addGlobalTraveler();}">
+      <button type="button" class="btn-secondary" onclick="addGlobalTraveler()">Add</button>
+    </div>
+    <div class="traveler-row" id="global-traveler-list" style="margin-top:12px; margin-bottom:0;"></div>
+
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeTravelersModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirm-overlay">
+  <div class="modal" style="max-width:380px;">
+    <p id="confirm-message" style="font-family:'Poppins',sans-serif; font-size:14.5px; line-height:1.5; margin:4px 0 20px; color:var(--ink);"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="resolveConfirm(false)">Cancel</button>
+      <button class="btn-primary" onclick="resolveConfirm(true)">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let places = [];
 let trips = [];
+let travelers = [];
 let currentTripId = null;
 let currentCategory = 'All';
 let currentStatusFilter = 'All';
 let currentCityFilter = 'All';
 let currentStatus = 'want';
 let currentRating = 0;
-let tempTravelers = [];
+let tempTravelerIds = [];
 
 const CATEGORIES = ['All','Restaurant','Coffee Shop','Hotel','Attraction','Other'];
 const STATUS_FILTERS = ['All','Want to go','Visited'];
@@ -496,10 +494,17 @@ async function initFirebaseSync(){
     showBanner('saving', 'Connecting to shared storage…');
     await ensureFirebase();
     const ref = db.collection('waypoints').doc('shared');
-    ref.onSnapshot((doc)=>{
+    ref.onSnapshot(async (doc)=>{
       const data = doc.exists ? doc.data() : {};
       trips = data.trips || [];
       places = data.places || [];
+      travelers = data.travelers || [];
+      const changed = migrateLegacyTravelers();
+      if(changed){
+        await persistTravelers();
+        await persistTrips();
+        await persistPlaces();
+      }
       hideBanner();
       renderTripTabs();
       renderTravelerRow();
@@ -513,6 +518,17 @@ async function initFirebaseSync(){
     console.error('Firebase init error', e);
     showBanner('error', "Couldn't connect to shared storage — check your Firebase setup.");
   }
+}
+
+let _confirmResolve = null;
+function showConfirm(message){
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-overlay').classList.add('open');
+  return new Promise(resolve => { _confirmResolve = resolve; });
+}
+function resolveConfirm(result){
+  document.getElementById('confirm-overlay').classList.remove('open');
+  if(_confirmResolve){ _confirmResolve(result); _confirmResolve = null; }
 }
 
 /* ---------- Trips ---------- */
@@ -535,65 +551,66 @@ function setTrip(id){
   renderGrid();
 }
 
+function travelerName(id){
+  const t = travelers.find(x=>x.id===id);
+  return t ? t.name : '';
+}
+
 function renderTravelerRow(){
   const el = document.getElementById('traveler-row');
   const manageBtn = document.getElementById('manage-travelers-btn');
   if(currentTripId===ALL_TRIPS_ID){
     manageBtn.style.display = 'none';
-    const allNames = [...new Set(trips.flatMap(t=>t.travelers||[]))];
-    el.innerHTML = allNames.length
-      ? allNames.map(name => `<span class="traveler-chip">🧳 ${escapeHtml(name)}</span>`).join('')
+    const allIds = [...new Set(trips.flatMap(t=>t.travelerIds||[]))];
+    el.innerHTML = allIds.length
+      ? allIds.map(id => `<span class="traveler-chip">🧳 ${escapeHtml(travelerName(id))}</span>`).join('')
       : `<span class="field-hint" style="text-transform:none">Viewing every trip.</span>`;
     return;
   }
   manageBtn.style.display = 'inline-block';
   const trip = getCurrentTrip();
-  if(!trip || !trip.travelers || !trip.travelers.length){
+  if(!trip || !trip.travelerIds || !trip.travelerIds.length){
     el.innerHTML = `<span class="field-hint" style="text-transform:none">No travelers added to this trip yet.</span>`;
     return;
   }
-  el.innerHTML = trip.travelers.map(name => `<span class="traveler-chip">🧳 ${escapeHtml(name)}</span>`).join('');
+  el.innerHTML = trip.travelerIds.map(id => `<span class="traveler-chip">🧳 ${escapeHtml(travelerName(id))}</span>`).join('');
 }
 
 function openTripModal(trip){
   document.getElementById('trip-modal-title').textContent = trip ? 'Manage trip' : 'New trip';
   document.getElementById('trip-edit-id').value = trip ? trip.id : '';
   document.getElementById('trip-name').value = trip ? trip.name : '';
-  tempTravelers = trip ? [...(trip.travelers||[])] : [];
-  document.getElementById('traveler-input').value = '';
-  renderTravelerChipsEditable();
+  tempTravelerIds = trip ? [...(trip.travelerIds||[])] : [];
+  renderTripTravelerChecklist();
   document.getElementById('delete-trip-btn').style.display = (trip && trips.length > 1) ? 'inline-block' : 'none';
   document.getElementById('trip-overlay').classList.add('open');
 }
 function closeTripModal(){ document.getElementById('trip-overlay').classList.remove('open'); }
 
-function renderTravelerChipsEditable(){
-  const el = document.getElementById('traveler-chips');
-  if(!tempTravelers.length){
-    el.innerHTML = `<span class="field-hint" style="text-transform:none">No travelers yet — add names above.</span>`;
+function renderTripTravelerChecklist(){
+  const el = document.getElementById('trip-traveler-checklist');
+  if(!travelers.length){
+    el.innerHTML = `<span class="field-hint" style="text-transform:none">No travelers in your roster yet — add some via "👥 All travelers."</span>`;
     return;
   }
-  el.innerHTML = tempTravelers.map((name,i) =>
-    `<span class="traveler-chip">${escapeHtml(name)} <button type="button" onclick="removeTravelerChip(${i})">✕</button></span>`
-  ).join('');
+  el.innerHTML = travelers.map(t => `
+    <label class="traveler-check-row">
+      <input type="checkbox" value="${escapeAttr(t.id)}" ${tempTravelerIds.includes(t.id)?'checked':''} onchange="toggleTempTraveler('${t.id}', this.checked)">
+      ${escapeHtml(t.name)}
+    </label>
+  `).join('');
 }
-function addTravelerChip(){
-  const input = document.getElementById('traveler-input');
-  const name = input.value.trim();
-  if(!name) return;
-  tempTravelers.push(name);
-  input.value = '';
-  renderTravelerChipsEditable();
-  input.focus();
+function toggleTempTraveler(id, checked){
+  if(checked){ if(!tempTravelerIds.includes(id)) tempTravelerIds.push(id); }
+  else { tempTravelerIds = tempTravelerIds.filter(x=>x!==id); }
 }
-function removeTravelerChip(i){ tempTravelers.splice(i,1); renderTravelerChipsEditable(); }
 
 async function saveTrip(){
   const name = document.getElementById('trip-name').value.trim();
   if(!name){ alert('Give the trip a name first.'); return; }
   const id = document.getElementById('trip-edit-id').value || ('trip-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5));
   const idx = trips.findIndex(t=>t.id===id);
-  const trip = { id, name, travelers:[...tempTravelers], createdAt: idx>=0 ? trips[idx].createdAt : Date.now() };
+  const trip = { id, name, travelerIds:[...tempTravelerIds], createdAt: idx>=0 ? trips[idx].createdAt : Date.now() };
   if(idx>=0) trips[idx] = trip; else trips.push(trip);
   currentTripId = id;
   await persistTrips();
@@ -607,7 +624,7 @@ async function deleteCurrentTrip(){
   const id = document.getElementById('trip-edit-id').value;
   if(!id) return;
   if(trips.length <= 1){ alert('You need at least one trip.'); return; }
-  if(!confirm('Delete this trip? Its places will move to your other trip.')) return;
+  if(!(await showConfirm('Delete this trip? Its places will move to your other trip.'))) return;
   trips = trips.filter(t=>t.id!==id);
   const fallbackId = trips[0].id;
   places.forEach(p => { if(p.tripId===id) p.tripId = fallbackId; });
@@ -618,6 +635,58 @@ async function deleteCurrentTrip(){
   renderTripTabs();
   renderTravelerRow();
   renderGrid();
+}
+
+/* ---------- Global traveler roster ---------- */
+
+function openTravelersModal(){
+  document.getElementById('global-traveler-input').value = '';
+  renderGlobalTravelerList();
+  document.getElementById('travelers-overlay').classList.add('open');
+}
+function closeTravelersModal(){
+  document.getElementById('travelers-overlay').classList.remove('open');
+  // Refresh anything that depends on the roster in case names/removals changed
+  renderTripTravelerChecklist();
+  renderTravelerRow();
+  renderGrid();
+}
+
+function renderGlobalTravelerList(){
+  const el = document.getElementById('global-traveler-list');
+  if(!travelers.length){
+    el.innerHTML = `<span class="field-hint" style="text-transform:none">No travelers yet — add someone above.</span>`;
+    return;
+  }
+  el.innerHTML = travelers.map(t =>
+    `<span class="traveler-chip">${escapeHtml(t.name)} <button type="button" onclick="removeGlobalTraveler('${t.id}')">✕</button></span>`
+  ).join('');
+}
+
+async function addGlobalTraveler(){
+  const input = document.getElementById('global-traveler-input');
+  const name = input.value.trim();
+  if(!name) return;
+  const id = 'trav-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  travelers.push({ id, name, createdAt: Date.now() });
+  input.value = '';
+  renderGlobalTravelerList();
+  input.focus();
+  await persistTravelers();
+}
+
+async function removeGlobalTraveler(id){
+  const t = travelers.find(x=>x.id===id);
+  if(!t) return;
+  if(!(await showConfirm(`Remove ${t.name} from your traveler roster? They'll be removed from any trips and places they're tagged on.`))) return;
+  travelers = travelers.filter(x=>x.id!==id);
+  trips.forEach(trip => { if(trip.travelerIds) trip.travelerIds = trip.travelerIds.filter(tid=>tid!==id); });
+  places.forEach(p => { if(p.suggestedBy===id) p.suggestedBy = ''; });
+  tempTravelerIds = tempTravelerIds.filter(x=>x!==id);
+  renderGlobalTravelerList();
+  await persistTravelers();
+  await persistTrips();
+  await persistPlaces();
 }
 
 /* ---------- Category / status / city filters ---------- */
@@ -827,7 +896,7 @@ async function buildShareCardBlob(p){
   const infoLines = [];
   if(p.address || p.city) infoLines.push('📍 ' + [p.address, p.city].filter(Boolean).join(', '));
   if(p.phone) infoLines.push('📞 ' + p.phone);
-  if(p.suggestedBy) infoLines.push('🙋 Suggested by ' + p.suggestedBy);
+  if(p.suggestedBy) infoLines.push('🙋 Suggested by ' + travelerName(p.suggestedBy));
   infoLines.forEach(line=>{
     cursorY = wrapCanvasText(ctx, line, pad, cursorY, textW, 30, 1) + 4;
   });
@@ -913,7 +982,7 @@ function cardHtml(p){
           <span class="cat-pill">${escapeHtml(categoryLabel(p))}</span>
         </div>
         ${currentTripId===ALL_TRIPS_ID ? `<div class="addr">🧭 ${escapeHtml(tripName(p.tripId))}</div>` : ''}
-        ${p.suggestedBy ? `<div class="addr">🙋 Suggested by ${escapeHtml(p.suggestedBy)}</div>` : ''}
+        ${p.suggestedBy ? `<div class="addr">🙋 Suggested by ${escapeHtml(travelerName(p.suggestedBy))}</div>` : ''}
         ${p.address ? `<div class="addr">📍 ${escapeHtml(p.address)}</div>` : ''}
         ${p.phone ? `<div class="addr"><a class="place-link" href="tel:${escapeAttr(p.phone.replace(/[^0-9+]/g,''))}" onclick="event.stopPropagation()">📞 ${escapeHtml(p.phone)}</a></div>` : ''}
         <div class="link-row">
@@ -983,8 +1052,10 @@ function renderGrid(){
     <div class="city-group">
       <div class="city-heading ${band}">
         <h3>${escapeHtml(city)}</h3>
-        <span class="city-count">${groups[city].length} place${groups[city].length===1?'':'s'}</span>
-        ${city!=='Unsorted' ? `<span class="weather-chip" data-loc="${escapeAttr(city)}">⋯</span>` : ''}
+        <div class="city-meta">
+          <span class="city-count">${groups[city].length} place${groups[city].length===1?'':'s'}</span>
+          ${city!=='Unsorted' ? `<span class="weather-chip" data-loc="${escapeAttr(city)}">⋯</span>` : ''}
+        </div>
       </div>
       <div class="city-scallop ${band}"></div>
       <div class="grid">${groups[city].map(cardHtml).join('')}</div>
@@ -1151,10 +1222,10 @@ function refreshSuggestedByOptions(){
   const trip = trips.find(t=>t.id===tripId);
   const sel = document.getElementById('f-suggested-by');
   const prev = sel.value;
-  const travelers = (trip && trip.travelers) || [];
+  const tripTravelerIds = (trip && trip.travelerIds) || [];
   sel.innerHTML = `<option value="">— unspecified —</option>` +
-    travelers.map(name => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
-  if(travelers.includes(prev)) sel.value = prev;
+    tripTravelerIds.map(id => `<option value="${escapeAttr(id)}">${escapeHtml(travelerName(id))}</option>`).join('');
+  if(tripTravelerIds.includes(prev)) sel.value = prev;
 }
 
 function openModal(place){
@@ -1223,14 +1294,14 @@ async function savePlace(){
 }
 
 async function deletePlace(id){
-  if(!confirm('Remove this place from the log?')) return;
+  if(!(await showConfirm('Remove this place from the log?'))) return;
   places = places.filter(p=>p.id!==id);
   await persistPlaces();
   renderGrid();
 }
 
 function exportData(){
-  const blob = new Blob([JSON.stringify({ trips, places }, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify({ trips, places, travelers }, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1250,7 +1321,14 @@ function importData(event){
       const imported = JSON.parse(e.target.result);
       const importedPlaces = Array.isArray(imported) ? imported : (imported.places || []);
       const importedTrips = Array.isArray(imported) ? [] : (imported.trips || []);
+      const importedTravelers = Array.isArray(imported) ? [] : (imported.travelers || []);
       if(!Array.isArray(importedPlaces)) throw new Error('File is not a places list');
+
+      const existingTravelerIds = new Set(travelers.map(t=>t.id));
+      let travelersAdded = 0;
+      importedTravelers.forEach(t=>{
+        if(t && t.id && !existingTravelerIds.has(t.id)){ travelers.push(t); travelersAdded++; }
+      });
 
       const existingTripIds = new Set(trips.map(t=>t.id));
       let tripsAdded = 0;
@@ -1271,9 +1349,10 @@ function importData(event){
       renderTripTabs();
       renderTravelerRow();
       renderGrid();
+      await persistTravelers();
       await persistTrips();
       await persistPlaces();
-      alert(`Imported ${added} new place${added===1?'':'s'} and ${tripsAdded} trip${tripsAdded===1?'':'s'}.`);
+      alert(`Imported ${added} new place${added===1?'':'s'}, ${tripsAdded} trip${tripsAdded===1?'':'s'}, and ${travelersAdded} traveler${travelersAdded===1?'':'s'}.`);
     }catch(err){
       alert('Could not read that file: ' + err.message);
     }
@@ -1333,6 +1412,45 @@ async function persistPlaces(attempt=1){
       return persistPlaces(attempt+1);
     }
     showBanner('error', 'Couldn\'t save to the shared list right now. Use "Export" to save a backup file so nothing\'s lost, and try again later.');
+    return false;
+  }
+}
+
+async function persistTravelers(attempt=1){
+  const MAX_ATTEMPTS = 3;
+  if(!HAS_STORAGE_BRIDGE && FIREBASE_CONFIGURED){
+    try{
+      await ensureFirebase();
+      await db.collection('waypoints').doc('shared').set({ travelers }, { merge: true });
+      return true;
+    }catch(e){
+      console.error('Firestore travelers save error (attempt '+attempt+')', e);
+      if(attempt < MAX_ATTEMPTS){
+        await sleep(600 * attempt);
+        return persistTravelers(attempt+1);
+      }
+      showBanner('error', 'Couldn\'t save traveler changes right now. Try again in a moment.');
+      return false;
+    }
+  }
+  if(!HAS_STORAGE_BRIDGE && !FIREBASE_CONFIGURED){
+    showBanner('error', 'No shared storage configured — add your Firebase settings, or use Export to save a backup file.');
+    return false;
+  }
+  try{
+    if(!window.storage || typeof window.storage.set !== 'function'){
+      throw new Error('Storage unavailable');
+    }
+    const result = await window.storage.set('travelers', JSON.stringify(travelers), true);
+    if(!result) throw new Error('Empty response from storage');
+    return true;
+  }catch(e){
+    console.error('Travelers save error (attempt '+attempt+')', e);
+    if(attempt < MAX_ATTEMPTS){
+      await sleep(600 * attempt);
+      return persistTravelers(attempt+1);
+    }
+    showBanner('error', 'Couldn\'t save traveler changes right now. Try again in a moment.');
     return false;
   }
 }
@@ -1421,6 +1539,60 @@ async function loadTrips(attempt=1){
   }
 }
 
+async function loadTravelers(attempt=1){
+  const MAX_ATTEMPTS = 3;
+  try{
+    if(!window.storage || typeof window.storage.get !== 'function'){
+      throw new Error('Storage unavailable');
+    }
+    const result = await window.storage.get('travelers', true);
+    travelers = result ? JSON.parse(result.value) : [];
+  }catch(e){
+    if(String(e).toLowerCase().includes('not found') || String(e).toLowerCase().includes('key not found')){
+      travelers = [];
+    } else if(attempt < MAX_ATTEMPTS){
+      console.error('Travelers load error (attempt '+attempt+')', e);
+      await sleep(500 * attempt);
+      return loadTravelers(attempt+1);
+    } else {
+      console.error('Travelers load error, giving up', e);
+      travelers = travelers || [];
+    }
+  }
+}
+
+function migrateLegacyTravelers(){
+  let changed = false;
+  if(travelers.length === 0){
+    const nameToId = {};
+    trips.forEach(trip=>{
+      if(Array.isArray(trip.travelers) && trip.travelers.length){
+        trip.travelerIds = trip.travelers.map(name=>{
+          if(!nameToId[name]){
+            const id = 'trav-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+            nameToId[name] = id;
+            travelers.push({ id, name, createdAt: Date.now() });
+          }
+          return nameToId[name];
+        });
+        delete trip.travelers;
+        changed = true;
+      } else if(!trip.travelerIds){
+        trip.travelerIds = [];
+      }
+    });
+    places.forEach(p=>{
+      if(p.suggestedBy && nameToId[p.suggestedBy]){
+        p.suggestedBy = nameToId[p.suggestedBy];
+        changed = true;
+      }
+    });
+  } else {
+    trips.forEach(trip=>{ if(!trip.travelerIds) trip.travelerIds = []; });
+  }
+  return changed;
+}
+
 async function init(){
   currentTripId = ALL_TRIPS_ID;
 
@@ -1433,6 +1605,7 @@ async function init(){
     } else {
       trips = [];
       places = [];
+      travelers = [];
       renderTripTabs();
       renderTravelerRow();
       renderTabs();
@@ -1442,7 +1615,7 @@ async function init(){
     return;
   }
 
-  await Promise.all([loadTrips(), loadPlaces()]);
+  await Promise.all([loadTrips(), loadPlaces(), loadTravelers()]);
 
   let needsPlaceSave = false;
 
@@ -1450,6 +1623,13 @@ async function init(){
     places.forEach(p=>{
       if(!p.tripId){ p.tripId = trips[0].id; needsPlaceSave = true; }
     });
+  }
+
+  const travelersChanged = migrateLegacyTravelers();
+  if(travelersChanged){
+    await persistTravelers();
+    await persistTrips();
+    needsPlaceSave = true;
   }
 
   if(needsPlaceSave) await persistPlaces();
