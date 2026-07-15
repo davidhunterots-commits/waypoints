@@ -193,6 +193,7 @@
     font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
     background:var(--cream-2); border:1.5px solid var(--ink); border-radius:999px;
     padding:3px 9px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+    color:var(--ink);
   }
 
   .empty-state{
@@ -262,11 +263,14 @@
   }
   textarea{ resize:vertical; min-height:56px; }
   .rating-input{ display:flex; gap:4px; margin-top:2px; }
-  .rating-input button{
-    background:none; border:none; font-size:26px; cursor:pointer; color:var(--line); padding:0;
-    line-height:1;
+  .rating-star{
+    position:relative; display:inline-block; width:28px; height:26px;
+    font-size:26px; line-height:1; cursor:pointer;
   }
-  .rating-input button.filled{ color:var(--mustard); }
+  .rating-star-bg{ position:absolute; top:0; left:0; color:var(--line); }
+  .rating-star-fill{
+    position:absolute; top:0; left:0; overflow:hidden; white-space:nowrap; color:var(--mustard);
+  }
   .status-toggle{ display:flex; gap:8px; margin-top:2px; }
   .status-toggle button{
     flex:1; padding:9px; border-radius:6px; border:2px solid var(--ink); background:#FFFDF6; cursor:pointer;
@@ -645,11 +649,11 @@ function refreshCityOptions(){
 }
 
 function starsHtml(rating){
-  let out = '<span class="stars">';
-  for(let i=1;i<=5;i++){
-    out += i<=rating ? '★' : '<span class="empty">★</span>';
-  }
-  return out + '</span>';
+  const pct = Math.max(0, Math.min(5, rating||0)) / 5 * 100;
+  return `<span class="stars" style="position:relative; display:inline-block; line-height:1;">`
+    + `<span class="empty">★★★★★</span>`
+    + `<span style="position:absolute; top:0; left:0; overflow:hidden; width:${pct}%; white-space:nowrap; color:var(--mustard);">★★★★★</span>`
+    + `</span>`;
 }
 
 function locationQuery(p){
@@ -806,9 +810,10 @@ async function buildShareCardBlob(p){
     ctx.fillStyle = '#1f5c27';
     ctx.fillText('VISITED', pad, cursorY);
     if(p.rating){
+      const rounded = Math.round(p.rating);
       ctx.fillStyle = '#E8A33D';
       ctx.font = '26px "Poppins"';
-      ctx.fillText('★'.repeat(p.rating) + '☆'.repeat(5-p.rating), pad+150, cursorY-2);
+      ctx.fillText('★'.repeat(rounded) + '☆'.repeat(5-rounded) + '  ' + p.rating + '/5', pad+150, cursorY-2);
     }
   } else {
     ctx.fillStyle = '#E8604C';
@@ -916,7 +921,6 @@ function cardHtml(p){
           ${p.website ? `<a class="place-link" href="${escapeAttr(p.website)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">🔗 Website</a>` : ''}
           ${p.social ? `<a class="place-link" href="${escapeAttr(p.social)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">📷 Social</a>` : ''}
         </div>
-        ${loc ? `<div class="weather-chip" data-loc="${escapeAttr(loc)}">⋯</div>` : ''}
         ${p.notes ? `<div class="notes">${escapeHtml(p.notes)}</div>` : ''}
         <div class="status-row">
           <div>
@@ -980,6 +984,7 @@ function renderGrid(){
       <div class="city-heading ${band}">
         <h3>${escapeHtml(city)}</h3>
         <span class="city-count">${groups[city].length} place${groups[city].length===1?'':'s'}</span>
+        ${city!=='Unsorted' ? `<span class="weather-chip" data-loc="${escapeAttr(city)}">⋯</span>` : ''}
       </div>
       <div class="city-scallop ${band}"></div>
       <div class="grid">${groups[city].map(cardHtml).join('')}</div>
@@ -1100,12 +1105,21 @@ function renderRatingInput(){
   const el = document.getElementById('rating-input');
   el.innerHTML = '';
   for(let i=1;i<=5;i++){
-    const btn = document.createElement('button');
-    btn.type='button';
-    btn.textContent = '★';
-    btn.className = i<=currentRating ? 'filled' : '';
-    btn.onclick = ()=>{ currentRating = (currentRating===i) ? 0 : i; renderRatingInput(); };
-    el.appendChild(btn);
+    const fillAmount = Math.max(0, Math.min(1, currentRating - (i-1)));
+    const wrap = document.createElement('span');
+    wrap.className = 'rating-star';
+    wrap.innerHTML =
+      `<span class="rating-star-bg">★</span>` +
+      `<span class="rating-star-fill" style="width:${fillAmount*100}%;">★</span>`;
+    wrap.onclick = (e)=>{
+      const rect = wrap.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const isHalf = clickX < rect.width/2;
+      const newVal = isHalf ? i-0.5 : i;
+      currentRating = (currentRating===newVal) ? 0 : newVal;
+      renderRatingInput();
+    };
+    el.appendChild(wrap);
   }
 }
 
