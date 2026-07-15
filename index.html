@@ -40,30 +40,17 @@
 
   /* Header */
   header.hero{
-    position:relative;
-    border:3px solid var(--ink);
-    border-radius:10px;
-    overflow:hidden;
-    margin-bottom:20px;
-    box-shadow: 7px 7px 0 var(--ink);
-    line-height:0;
+    display:flex;
+    justify-content:center;
+    margin-bottom:8px;
   }
-  .hero-image{ display:block; width:100%; height:auto; }
+  .hero-image{ display:block; width:100%; max-width:520px; height:auto; }
   .hero-sr-only{
     position:absolute; width:1px; height:1px; padding:0; margin:-1px;
     overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
   }
-  @keyframes spin-slow{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
-  .flight-path{
-    position:absolute; inset:0; width:100%; height:100%;
-    pointer-events:none; z-index:1; opacity:0.8;
-  }
-  @keyframes plane-fly{ from{ stroke-dashoffset:24; } to{ stroke-dashoffset:0; } }
-  .flight-path path{
-    animation: plane-fly 1.2s linear infinite;
-  }
   .hero-stats{
-    display:flex; gap:14px; flex-wrap:wrap; margin: 18px 0 22px;
+    display:flex; gap:14px; flex-wrap:wrap; margin: 18px 0 22px; justify-content:center;
   }
   .hero-stats div{
     font-family:'Space Mono', monospace;
@@ -275,12 +262,6 @@
     <img class="hero-image" src="header.png" alt="Waypoints — Shared Log, Est. 2026. Places we've found, places we're chasing. One list, every traveler.">
     <h1 class="hero-sr-only">Waypoints</h1>
     <div class="hero-sr-only">Shared Log · Est. 2026. Places we've found, places we're chasing. One list, every traveler.</div>
-    <svg class="flight-path" viewBox="0 0 1600 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M 960 340 L 1430 210" fill="none" stroke="#136158" stroke-width="3" stroke-dasharray="1 14" stroke-linecap="round" opacity="0.6"/>
-      <g transform="translate(1444,206) rotate(-16)">
-        <path d="M 20 0 L -13 11 L -4 0 L -13 -11 Z" fill="#136158" stroke="#2B2620" stroke-width="1.3" stroke-linejoin="round" opacity="0.85"/>
-      </g>
-    </svg>
   </header>
 
   <div class="hero-stats">
