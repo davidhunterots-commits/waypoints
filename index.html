@@ -504,14 +504,14 @@ async function ensureLeaflet(){
 
 const geoCache = {};
 
-async function geocodeViaOpenMeteo(loc){
+async function geocodeViaNominatim(loc){
   try{
-    const res = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=' + encodeURIComponent(loc));
+    const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(loc));
     const data = await res.json();
-    if(!data.results || !data.results.length) return null;
-    return { lat: data.results[0].latitude, lon: data.results[0].longitude };
+    if(!data || !data.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
   }catch(e){
-    console.error('Geocode (Open-Meteo) failed for', loc, e);
+    console.error('Geocode (Nominatim) failed for', loc, e);
     return null;
   }
 }
@@ -546,7 +546,7 @@ async function geocodeViaClaude(loc){
 function geocodeLocation(loc){
   const key = loc.toLowerCase();
   if(geoCache[key]) return geoCache[key];
-  const promise = HAS_STORAGE_BRIDGE ? geocodeViaClaude(loc) : geocodeViaOpenMeteo(loc);
+  const promise = HAS_STORAGE_BRIDGE ? geocodeViaClaude(loc) : geocodeViaNominatim(loc);
   geoCache[key] = promise;
   return promise;
 }
