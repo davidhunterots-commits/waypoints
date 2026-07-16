@@ -562,10 +562,11 @@ async function reverseGeocodeViaNominatim(lat, lon){
     const data = await res.json();
     if(!data || !data.address) return null;
     const a = data.address;
-    const street = [a.house_number, a.road].filter(Boolean).join(' ');
+    const street = [a.house_number, a.road || a.pedestrian || a.residential].filter(Boolean).join(' ');
     const city = a.city || a.town || a.village || a.hamlet || a.suburb || '';
     const name = a.amenity || a.shop || a.tourism || a.leisure || '';
-    return { address: street || (data.display_name || '').split(',')[0] || '', city, name };
+    const approximateArea = a.neighbourhood || a.suburb || a.residential || '';
+    return { address: street || '', city, name, approximate: !street ? approximateArea : '' };
   }catch(e){
     console.error('Reverse geocode (Nominatim) failed', e);
     return null;
@@ -581,7 +582,7 @@ async function reverseGeocodeViaClaude(lat, lon){
         model: "claude-sonnet-4-6",
         max_tokens: 300,
         messages: [
-          { role: "user", content: `Identify the street address for latitude ${lat}, longitude ${lon}. If there's an obvious named business or place right at these coordinates, include its name. Reply with ONLY a raw JSON object, no markdown fences: {"name": "<business/place name or empty string>", "address": "<street address, empty string if unknown>", "city": "<city, empty string if unknown>"}` }
+          { role: "user", content: `Identify the exact street address for latitude ${lat}, longitude ${lon}. If there's an obvious named business or place right at these coordinates, include its name. Only fill "address" with a real street number and street name — if you can't determine that precisely, leave "address" empty and instead put the general area (neighborhood/subdivision) in "approximate". Reply with ONLY a raw JSON object, no markdown fences: {"name": "<business/place name or empty string>", "address": "<exact street address, empty string if unknown>", "city": "<city, empty string if unknown>", "approximate": "<general area name if exact address is unknown, else empty string>"}` }
         ],
         tools: [{ type: "web_search_20250305", name: "web_search" }]
       })
@@ -591,7 +592,7 @@ async function reverseGeocodeViaClaude(lat, lon){
     const clean = text.replace(/```json|```/g, "").trim();
     const match = clean.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(match ? match[0] : clean);
-    return { name: parsed.name || '', address: parsed.address || '', city: parsed.city || '' };
+    return { name: parsed.name || '', address: parsed.address || '', city: parsed.city || '', approximate: parsed.approximate || '' };
   }catch(e){
     console.error('Reverse geocode (Claude) failed', e);
     return null;
@@ -614,7 +615,7 @@ function useMyLocation(){
     statusEl.textContent = 'Looking up the address…';
     try{
       const result = await reverseGeocode(latitude, longitude);
-      if(!result || (!result.address && !result.city)){
+      if(!result || (!result.address && !result.city && !result.approximate)){
         statusEl.textContent = "Couldn't find an address for your location.";
         return;
       }
@@ -623,7 +624,13 @@ function useMyLocation(){
       if(result.name && !document.getElementById('f-name').value.trim()){
         document.getElementById('f-name').value = result.name;
       }
-      statusEl.textContent = '📍 Filled in from your current location — double check it before saving.';
+      if(result.address){
+        statusEl.textContent = '📍 Filled in from your current location — double check it before saving.';
+      } else if(result.approximate){
+        statusEl.textContent = `📍 Got your general area (${result.approximate}) but not an exact street address — the map data doesn't have one for this spot. City was filled in; please type the street address yourself.`;
+      } else {
+        statusEl.textContent = '📍 City filled in — no street-level address available for this spot, please type it in.';
+      }
     }catch(e){
       console.error('Reverse geocode failed', e);
       statusEl.textContent = "Couldn't look up your address right now.";
