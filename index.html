@@ -312,6 +312,9 @@
     <h2 id="modal-title">Add a place</h2>
     <input type="hidden" id="edit-id">
 
+    <button type="button" class="btn-secondary" onclick="useMyLocation()">📍 Use my current location</button>
+    <div class="field-hint" id="location-status" style="text-transform:none; margin-top:6px;"></div>
+
     <label>Name</label>
     <input type="text" id="f-name" placeholder="e.g. Sunset Noodle Bar">
 
@@ -549,6 +552,92 @@ function geocodeLocation(loc){
   const promise = HAS_STORAGE_BRIDGE ? geocodeViaClaude(loc) : geocodeViaNominatim(loc);
   geoCache[key] = promise;
   return promise;
+}
+
+/* ---------- Reverse geocoding (coordinates -> address), for "Use my location" ---------- */
+
+async function reverseGeocodeViaNominatim(lat, lon){
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+    const data = await res.json();
+    if(!data || !data.address) return null;
+    const a = data.address;
+    const street = [a.house_number, a.road].filter(Boolean).join(' ');
+    const city = a.city || a.town || a.village || a.hamlet || a.suburb || '';
+    const name = a.amenity || a.shop || a.tourism || a.leisure || '';
+    return { address: street || (data.display_name || '').split(',')[0] || '', city, name };
+  }catch(e){
+    console.error('Reverse geocode (Nominatim) failed', e);
+    return null;
+  }
+}
+
+async function reverseGeocodeViaClaude(lat, lon){
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 300,
+        messages: [
+          { role: "user", content: `Identify the street address for latitude ${lat}, longitude ${lon}. If there's an obvious named business or place right at these coordinates, include its name. Reply with ONLY a raw JSON object, no markdown fences: {"name": "<business/place name or empty string>", "address": "<street address, empty string if unknown>", "city": "<city, empty string if unknown>"}` }
+        ],
+        tools: [{ type: "web_search_20250305", name: "web_search" }]
+      })
+    });
+    const data = await response.json();
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    const clean = text.replace(/```json|```/g, "").trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : clean);
+    return { name: parsed.name || '', address: parsed.address || '', city: parsed.city || '' };
+  }catch(e){
+    console.error('Reverse geocode (Claude) failed', e);
+    return null;
+  }
+}
+
+function reverseGeocode(lat, lon){
+  return HAS_STORAGE_BRIDGE ? reverseGeocodeViaClaude(lat, lon) : reverseGeocodeViaNominatim(lat, lon);
+}
+
+function useMyLocation(){
+  const statusEl = document.getElementById('location-status');
+  if(!navigator.geolocation){
+    statusEl.textContent = "Location isn't available in this browser.";
+    return;
+  }
+  statusEl.textContent = 'Finding your location…';
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const { latitude, longitude } = pos.coords;
+    statusEl.textContent = 'Looking up the address…';
+    try{
+      const result = await reverseGeocode(latitude, longitude);
+      if(!result || (!result.address && !result.city)){
+        statusEl.textContent = "Couldn't find an address for your location.";
+        return;
+      }
+      if(result.address) document.getElementById('f-address').value = result.address;
+      if(result.city) document.getElementById('f-city').value = result.city;
+      if(result.name && !document.getElementById('f-name').value.trim()){
+        document.getElementById('f-name').value = result.name;
+      }
+      statusEl.textContent = '📍 Filled in from your current location — double check it before saving.';
+    }catch(e){
+      console.error('Reverse geocode failed', e);
+      statusEl.textContent = "Couldn't look up your address right now.";
+    }
+  }, (err)=>{
+    console.error('Geolocation error', err);
+    if(err.code === 1){
+      statusEl.textContent = 'Location permission was denied — check your browser/app settings.';
+    } else if(err.code === 3){
+      statusEl.textContent = 'Location lookup timed out — try again.';
+    } else {
+      statusEl.textContent = "Couldn't get your location right now.";
+    }
+  }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 /* ---------- City map modal ---------- */
@@ -1381,6 +1470,7 @@ function refreshSuggestedByOptions(){
 function openModal(place){
   document.getElementById('modal-title').textContent = place ? 'Edit place' : 'Add a place';
   document.getElementById('edit-id').value = place ? place.id : '';
+  document.getElementById('location-status').textContent = '';
   document.getElementById('f-name').value = place ? place.name : '';
   const tripSel = document.getElementById('f-trip');
   tripSel.innerHTML = trips.map(t => `<option value="${escapeAttr(t.id)}">${escapeHtml(t.name)}</option>`).join('');
