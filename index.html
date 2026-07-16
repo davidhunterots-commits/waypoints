@@ -175,6 +175,15 @@
     position:relative;
   }
   .city-meta{ display:flex; align-items:center; gap:8px; }
+  .city-map-btn{
+    font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+    background:#FFFDF6; border:1.5px solid var(--ink); border-radius:999px;
+    padding:3px 10px; cursor:pointer; color:var(--ink);
+  }
+  .city-map-box{
+    width:100%; height:420px; border:2.5px solid var(--ink); border-radius:8px;
+    overflow:hidden; background:var(--cream-2); margin-top:6px;
+  }
   .city-heading h3{
     font-family:'Alfa Slab One', serif; font-weight:400; font-size:22px; margin:0;
     letter-spacing:0.01em;
@@ -407,6 +416,17 @@
   </div>
 </div>
 
+<div class="overlay" id="city-map-overlay">
+  <div class="modal" style="max-width:640px;">
+    <h2 id="city-map-title">City Map</h2>
+    <div id="city-map-status" class="field-hint" style="text-transform:none; margin-bottom:4px;"></div>
+    <div class="city-map-box" id="city-map-container"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeCityMapModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let places = [];
 let trips = [];
@@ -454,6 +474,154 @@ function loadScript(src){
     s.onerror = () => reject(new Error('Failed to load ' + src));
     document.head.appendChild(s);
   });
+}
+
+function loadStylesheet(href){
+  return new Promise((resolve, reject)=>{
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = resolve;
+    link.onerror = () => reject(new Error('Failed to load ' + href));
+    document.head.appendChild(link);
+  });
+}
+
+let leafletReadyPromise = null;
+async function ensureLeaflet(){
+  if(window.L) return window.L;
+  if(!leafletReadyPromise){
+    leafletReadyPromise = (async ()=>{
+      await loadStylesheet('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');
+      return window.L;
+    })();
+  }
+  return leafletReadyPromise;
+}
+
+/* ---------- Geocoding (dual-mode, same pattern as weather) ---------- */
+
+const geoCache = {};
+
+async function geocodeViaOpenMeteo(loc){
+  try{
+    const res = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=' + encodeURIComponent(loc));
+    const data = await res.json();
+    if(!data.results || !data.results.length) return null;
+    return { lat: data.results[0].latitude, lon: data.results[0].longitude };
+  }catch(e){
+    console.error('Geocode (Open-Meteo) failed for', loc, e);
+    return null;
+  }
+}
+
+async function geocodeViaClaude(loc){
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 200,
+        messages: [
+          { role: "user", content: `What are the latitude and longitude coordinates of ${loc}? Reply with ONLY a raw JSON object, no markdown fences: {"lat": <number>, "lon": <number>}` }
+        ],
+        tools: [{ type: "web_search_20250305", name: "web_search" }]
+      })
+    });
+    const data = await response.json();
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    const clean = text.replace(/```json|```/g, "").trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : clean);
+    if(typeof parsed.lat !== 'number' || typeof parsed.lon !== 'number') return null;
+    return { lat: parsed.lat, lon: parsed.lon };
+  }catch(e){
+    console.error('Geocode (Claude) failed for', loc, e);
+    return null;
+  }
+}
+
+function geocodeLocation(loc){
+  const key = loc.toLowerCase();
+  if(geoCache[key]) return geoCache[key];
+  const promise = HAS_STORAGE_BRIDGE ? geocodeViaClaude(loc) : geocodeViaOpenMeteo(loc);
+  geoCache[key] = promise;
+  return promise;
+}
+
+/* ---------- City map modal ---------- */
+
+let cityMapInstance = null;
+
+async function openCityMap(city){
+  if(cityMapInstance){ cityMapInstance.remove(); cityMapInstance = null; }
+  document.getElementById('city-map-title').textContent = city;
+  document.getElementById('city-map-status').textContent = 'Loading map…';
+  document.getElementById('city-map-container').innerHTML = '';
+  document.getElementById('city-map-overlay').classList.add('open');
+
+  const cityPlaces = places.filter(p =>
+    (p.city||'').trim() === city &&
+    (currentTripId===ALL_TRIPS_ID || (p.tripId||'')===currentTripId)
+  );
+
+  if(!cityPlaces.length){
+    document.getElementById('city-map-status').textContent = 'No places found for this city.';
+    return;
+  }
+
+  try{
+    const L = await ensureLeaflet();
+    const map = L.map('city-map-container');
+    cityMapInstance = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    document.getElementById('city-map-status').textContent = 'Locating places…';
+
+    const results = await Promise.all(cityPlaces.map(async p=>{
+      const loc = locationQuery(p) || city;
+      const coords = await geocodeLocation(loc);
+      return coords ? { p, coords } : null;
+    }));
+    const located = results.filter(Boolean);
+
+    if(!located.length){
+      document.getElementById('city-map-status').textContent = "Couldn't locate any of these places on the map.";
+      map.setView([20,0], 2);
+      return;
+    }
+
+    const markers = located.map(({p, coords})=>{
+      const marker = L.marker([coords.lat, coords.lon]).addTo(map);
+      const ratingText = (p.status==='visited' && p.rating) ? ` · ${p.rating}/5` : '';
+      marker.bindPopup(`<strong>${escapeHtml(p.name)}</strong><br>${escapeHtml(categoryLabel(p))}${ratingText}`);
+      return marker;
+    });
+
+    if(markers.length === 1){
+      map.setView(markers[0].getLatLng(), 14);
+    } else {
+      const group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(0.2));
+    }
+
+    const missing = cityPlaces.length - located.length;
+    document.getElementById('city-map-status').textContent =
+      missing > 0 ? `Showing ${located.length} of ${cityPlaces.length} places (${missing} couldn't be located).` : `Showing all ${located.length} places.`;
+  }catch(e){
+    console.error('City map error', e);
+    document.getElementById('city-map-status').textContent = 'Could not load the map right now.';
+  }
+}
+
+function closeCityMapModal(){
+  document.getElementById('city-map-overlay').classList.remove('open');
+  if(cityMapInstance){ cityMapInstance.remove(); cityMapInstance = null; }
 }
 
 async function ensureFirebase(){
@@ -1036,6 +1204,7 @@ function renderGrid(){
         <div class="city-meta">
           <span class="city-count">${groups[city].length} place${groups[city].length===1?'':'s'}</span>
           ${city!=='Unsorted' ? `<span class="weather-chip" data-loc="${escapeAttr(city)}">⋯</span>` : ''}
+          ${city!=='Unsorted' ? `<button class="city-map-btn" onclick="openCityMap('${escapeAttr(city)}')">🗺 View all</button>` : ''}
         </div>
       </div>
       <div class="city-scallop ${band}"></div>
