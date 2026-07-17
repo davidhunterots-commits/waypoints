@@ -599,8 +599,56 @@ async function reverseGeocodeViaClaude(lat, lon){
   }
 }
 
+function haversineMeters(lat1, lon1, lat2, lon2){
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+async function findNearbyNamedPlace(lat, lon){
+  try{
+    const query = `[out:json][timeout:12];(node(around:75,${lat},${lon})["name"]["shop"];node(around:75,${lat},${lon})["name"]["amenity"];node(around:75,${lat},${lon})["name"]["tourism"];node(around:75,${lat},${lon})["name"]["leisure"];);out body 20;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+    const data = await res.json();
+    if(!data.elements || !data.elements.length) return null;
+    let best = null, bestDist = Infinity;
+    data.elements.forEach(el=>{
+      if(!el.tags || !el.tags.name || typeof el.lat !== 'number') return;
+      const d = haversineMeters(lat, lon, el.lat, el.lon);
+      if(d < bestDist){ bestDist = d; best = el; }
+    });
+    return best;
+  }catch(e){
+    console.error('Nearby-place lookup (Overpass) failed', e);
+    return null;
+  }
+}
+
+async function reverseGeocodeStandalone(lat, lon){
+  const nearby = await findNearbyNamedPlace(lat, lon);
+  if(nearby){
+    const t = nearby.tags;
+    const tagAddress = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+    if(tagAddress){
+      return { name: t.name, address: tagAddress, city: t['addr:city'] || '', approximate: '' };
+    }
+    // POI found but no address tags on it directly — reverse-geocode its own
+    // (more precise) coordinates instead of the raw GPS point.
+    const geocoded = await reverseGeocodeViaNominatim(nearby.lat, nearby.lon);
+    if(geocoded){
+      return { name: t.name, address: geocoded.address, city: geocoded.city, approximate: geocoded.approximate };
+    }
+    return { name: t.name, address: '', city: '', approximate: '' };
+  }
+  return reverseGeocodeViaNominatim(lat, lon);
+}
+
 function reverseGeocode(lat, lon){
-  return HAS_STORAGE_BRIDGE ? reverseGeocodeViaClaude(lat, lon) : reverseGeocodeViaNominatim(lat, lon);
+  return HAS_STORAGE_BRIDGE ? reverseGeocodeViaClaude(lat, lon) : reverseGeocodeStandalone(lat, lon);
 }
 
 function useMyLocation(){
