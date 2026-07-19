@@ -1062,14 +1062,14 @@ function roundedRectPath(ctx, x, y, w, h, r){
 }
 
 async function buildShareCardBlob(p){
-  const W = 1200, H = 630;
+  const W = 1080, H = 1080;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
   try{
     await Promise.all([
-      document.fonts.load('700 58px "Alfa Slab One"'),
+      document.fonts.load('700 52px "Alfa Slab One"'),
       document.fonts.load('700 24px "Space Mono"'),
       document.fonts.load('600 26px "Poppins"'),
       document.fonts.load('400 24px "Poppins"')
@@ -1098,11 +1098,15 @@ async function buildShareCardBlob(p){
 
   const pad = 56;
   const hasPhoto = !!photoImg;
-  const textW = hasPhoto ? 620 : W - pad*2;
+  const textW = W - pad*2;
+  const titleFont = hasPhoto ? 46 : 58;
+  const notesMaxLines = hasPhoto ? 2 : 3;
 
-  // Photo panel (right side)
+  let cursorY = 96;
+
+  // Photo panel (full width, stacked on top)
   if(hasPhoto){
-    const px = W - 56 - 460, py = 56, pw = 460, ph = H - 112;
+    const px = 48, py = 48, pw = W - 96, ph = 420;
     ctx.save();
     roundedRectPath(ctx, px, py, pw, ph, 14);
     ctx.clip();
@@ -1114,14 +1118,15 @@ async function buildShareCardBlob(p){
     ctx.lineWidth = 6;
     roundedRectPath(ctx, px, py, pw, ph, 14);
     ctx.stroke();
+    cursorY = py + ph + 44;
   }
 
   // Title, with a white halo behind it like the header wordmark
   ctx.fillStyle = '#2C5C64';
-  ctx.font = '700 58px "Alfa Slab One"';
+  ctx.font = `700 ${titleFont}px "Alfa Slab One"`;
   ctx.textBaseline = 'top';
-  let cursorY = wrapCanvasText(ctx, p.name, pad, 110, textW, 62, 2, '#FFFDF6', 7);
-  cursorY += 12;
+  cursorY = wrapCanvasText(ctx, p.name, pad, cursorY, textW, titleFont+4, 2, '#FFFDF6', 7);
+  cursorY += 14;
 
   // Coral two-part pill, matching the header's "SHARED LOG · EST. 2026" badge
   ctx.font = '700 19px "Space Mono"';
@@ -1136,47 +1141,47 @@ async function buildShareCardBlob(p){
   ctx.stroke();
   ctx.fillStyle = '#F2E6C9';
   ctx.fillText(pillText, pad+18, cursorY+10);
-  cursorY += 58;
+  cursorY += 60;
 
   // Status + rating
-  ctx.font = '700 22px "Space Mono"';
+  ctx.font = '700 24px "Space Mono"';
   if(p.status === 'visited'){
     ctx.fillStyle = '#1f5c27';
     ctx.fillText('VISITED', pad, cursorY);
     if(p.rating){
       const rounded = Math.round(p.rating);
       ctx.fillStyle = '#E8A33D';
-      ctx.font = '26px "Poppins"';
-      ctx.fillText('★'.repeat(rounded) + '☆'.repeat(5-rounded) + '  ' + p.rating + '/5', pad+150, cursorY-2);
+      ctx.font = '30px "Poppins"';
+      ctx.fillText('★'.repeat(rounded) + '☆'.repeat(5-rounded) + '  ' + p.rating + '/5', pad+160, cursorY-3);
     }
   } else {
     ctx.fillStyle = '#E8604C';
     ctx.fillText('WANT TO GO', pad, cursorY);
   }
-  cursorY += 44;
+  cursorY += 50;
 
   // Address / phone / suggested-by
-  ctx.font = '400 24px "Poppins"';
+  ctx.font = '400 25px "Poppins"';
   ctx.fillStyle = '#2B2620';
   const infoLines = [];
   if(p.address || p.city) infoLines.push('📍 ' + [p.address, p.city].filter(Boolean).join(', '));
   if(p.phone) infoLines.push('📞 ' + p.phone);
   if(p.suggestedBy) infoLines.push('🙋 Suggested by ' + travelerName(p.suggestedBy));
   infoLines.forEach(line=>{
-    cursorY = wrapCanvasText(ctx, line, pad, cursorY, textW, 30, 1) + 4;
+    cursorY = wrapCanvasText(ctx, line, pad, cursorY, textW, 32, 1) + 6;
   });
-  cursorY += 8;
+  cursorY += 10;
 
   // Notes
   if(p.notes){
-    ctx.font = 'italic 22px "Poppins"';
+    ctx.font = 'italic 24px "Poppins"';
     ctx.fillStyle = '#4A473F';
-    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, textW, 30, 3);
+    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, textW, 32, notesMaxLines);
   }
 
   // Footer stamp
   drawSparkleStar(ctx, pad+8, H-48, 9, '#E8604C');
-  ctx.font = '700 18px "Space Mono"';
+  ctx.font = '700 19px "Space Mono"';
   ctx.fillStyle = '#136158';
   ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad+26, H - 56);
 
@@ -1186,10 +1191,18 @@ async function buildShareCardBlob(p){
 async function sharePlace(id){
   const p = places.find(x=>x.id===id);
   if(!p) return;
+
   const lines = [p.name];
-  if(p.city) lines.push(p.city);
-  if(p.address) lines.push(p.address);
-  if(p.phone) lines.push(p.phone);
+  if(p.status === 'visited' && p.rating){
+    const rounded = Math.round(p.rating);
+    lines.push('★'.repeat(rounded) + '☆'.repeat(5-rounded) + ` ${p.rating}/5`);
+  } else if(p.status === 'visited'){
+    lines.push('Visited ✅');
+  } else {
+    lines.push('On our travel list 🧭');
+  }
+  const locLine = [p.city, p.address].filter(Boolean).join(' · ');
+  if(locLine) lines.push(locLine);
   if(p.notes) lines.push(p.notes);
   lines.push(mapUrl(p));
   if(p.website) lines.push(p.website);
