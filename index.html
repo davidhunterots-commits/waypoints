@@ -1051,6 +1051,14 @@ function loadImageSafe(src){
   });
 }
 
+let watermarkIconPromise = null;
+function loadWatermarkIcon(){
+  if(!watermarkIconPromise){
+    watermarkIconPromise = loadImageSafe('icon-512.png').catch(()=>null);
+  }
+  return watermarkIconPromise;
+}
+
 function roundedRectPath(ctx, x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x+r, y);
@@ -1179,11 +1187,18 @@ async function buildShareCardBlob(p){
     cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, textW, 32, notesMaxLines);
   }
 
-  // Footer stamp
-  drawSparkleStar(ctx, pad+8, H-48, 9, '#E8604C');
+  // Footer stamp — small icon watermark, falling back to a sparkle star if it can't load
+  const watermarkIcon = await loadWatermarkIcon();
   ctx.font = '700 19px "Space Mono"';
   ctx.fillStyle = '#136158';
-  ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad+26, H - 56);
+  if(watermarkIcon){
+    const iconSize = 52;
+    ctx.drawImage(watermarkIcon, pad, H - 48 - iconSize/2, iconSize, iconSize);
+    ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad + iconSize + 14, H - 56);
+  } else {
+    drawSparkleStar(ctx, pad+8, H-48, 9, '#E8604C');
+    ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad+26, H - 56);
+  }
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 }
