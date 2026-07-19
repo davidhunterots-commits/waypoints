@@ -1051,17 +1051,30 @@ function loadImageSafe(src){
   });
 }
 
-let watermarkIconPromise = null;
-function loadWatermarkIcon(){
-  if(!watermarkIconPromise){
-    watermarkIconPromise = new Promise((resolve)=>{
+let headerBadgePromise = null;
+function loadHeaderBadge(){
+  if(!headerBadgePromise){
+    headerBadgePromise = new Promise((resolve)=>{
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = 'header.png';
+    });
+  }
+  return headerBadgePromise;
+}
+
+let footerIconPromise = null;
+function loadFooterIcon(){
+  if(!footerIconPromise){
+    footerIconPromise = new Promise((resolve)=>{
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = 'icon-512.png';
     });
   }
-  return watermarkIconPromise;
+  return footerIconPromise;
 }
 
 function roundedRectPath(ctx, x, y, w, h, r){
@@ -1109,7 +1122,7 @@ async function buildShareCardBlob(p){
     try{ photoImg = await loadImageSafe(p.photo); }catch(e){ photoImg = null; }
   }
 
-  const watermarkIcon = await loadWatermarkIcon();
+  const watermarkIcon = await loadHeaderBadge();
 
   const pad = 56;
   const hasPhoto = !!photoImg;
@@ -1202,11 +1215,12 @@ async function buildShareCardBlob(p){
   }
 
   // Footer stamp — small icon watermark, falling back to a sparkle star if it can't load
+  const footerIcon = await loadFooterIcon();
   ctx.font = '700 19px "Space Mono"';
   ctx.fillStyle = '#136158';
-  if(watermarkIcon){
+  if(footerIcon){
     const iconSize = 52;
-    ctx.drawImage(watermarkIcon, pad, H - 48 - iconSize/2, iconSize, iconSize);
+    ctx.drawImage(footerIcon, pad, H - 48 - iconSize/2, iconSize, iconSize);
     ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad + iconSize + 14, H - 56);
   } else {
     drawSparkleStar(ctx, pad+8, H-48, 9, '#E8604C');
