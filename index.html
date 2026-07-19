@@ -1109,11 +1109,15 @@ async function buildShareCardBlob(p){
     try{ photoImg = await loadImageSafe(p.photo); }catch(e){ photoImg = null; }
   }
 
+  const watermarkIcon = await loadWatermarkIcon();
+
   const pad = 56;
   const hasPhoto = !!photoImg;
-  const textW = W - pad*2;
   const titleFont = hasPhoto ? 46 : 58;
   const notesMaxLines = hasPhoto ? 2 : 3;
+  const titleIconSize = 60;
+  const textW = W - pad*2;
+  const titleTextW = watermarkIcon ? textW - titleIconSize - 20 : textW;
 
   let cursorY = 96;
 
@@ -1134,11 +1138,16 @@ async function buildShareCardBlob(p){
     cursorY = py + ph + 44;
   }
 
+  // Icon badge to the right of the place name
+  if(watermarkIcon){
+    ctx.drawImage(watermarkIcon, W - pad - titleIconSize, cursorY - 4, titleIconSize, titleIconSize);
+  }
+
   // Title, with a white halo behind it like the header wordmark
   ctx.fillStyle = '#2C5C64';
   ctx.font = `700 ${titleFont}px "Alfa Slab One"`;
   ctx.textBaseline = 'top';
-  cursorY = wrapCanvasText(ctx, p.name, pad, cursorY, textW, titleFont+4, 2, '#FFFDF6', 7);
+  cursorY = wrapCanvasText(ctx, p.name, pad, cursorY, titleTextW, titleFont+4, 2, '#FFFDF6', 7);
   cursorY += 14;
 
   // Coral two-part pill, matching the header's "SHARED LOG · EST. 2026" badge
@@ -1193,7 +1202,6 @@ async function buildShareCardBlob(p){
   }
 
   // Footer stamp — small icon watermark, falling back to a sparkle star if it can't load
-  const watermarkIcon = await loadWatermarkIcon();
   ctx.font = '700 19px "Space Mono"';
   ctx.fillStyle = '#136158';
   if(watermarkIcon){
