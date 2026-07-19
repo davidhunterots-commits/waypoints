@@ -1115,9 +1115,9 @@ async function buildShareCardBlob(p){
   const hasPhoto = !!photoImg;
   const titleFont = hasPhoto ? 46 : 58;
   const notesMaxLines = hasPhoto ? 2 : 3;
-  const titleIconSize = 60;
+  const titleIconSize = 108;
   const textW = W - pad*2;
-  const titleTextW = watermarkIcon ? textW - titleIconSize - 20 : textW;
+  const titleTextW = watermarkIcon ? textW - titleIconSize - 24 : textW;
 
   let cursorY = 96;
 
@@ -1140,7 +1140,7 @@ async function buildShareCardBlob(p){
 
   // Icon badge to the right of the place name
   if(watermarkIcon){
-    ctx.drawImage(watermarkIcon, W - pad - titleIconSize, cursorY - 4, titleIconSize, titleIconSize);
+    ctx.drawImage(watermarkIcon, W - pad - titleIconSize, cursorY - 12, titleIconSize, titleIconSize);
   }
 
   // Title, with a white halo behind it like the header wordmark
