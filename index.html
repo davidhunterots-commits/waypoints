@@ -990,6 +990,14 @@ function starsHtml(rating){
     + `</span>`;
 }
 
+function priceHtml(price){
+  const pct = Math.max(0, Math.min(4, price||0)) / 4 * 100;
+  return `<span class="stars" style="position:relative; display:inline-block; line-height:1; font-family:'Space Mono',monospace; font-weight:700; font-size:19px;">`
+    + `<span class="empty">$$$$</span>`
+    + `<span style="position:absolute; top:0; left:0; overflow:hidden; width:${pct}%; white-space:nowrap; color:#1f5c27;">$$$$</span>`
+    + `</span>`;
+}
+
 function locationQuery(p){
   const parts = [p.address, p.city].map(s=>(s||'').trim()).filter(Boolean);
   return parts.join(', ') || (p.city||'').trim();
@@ -1313,11 +1321,9 @@ function cardHtml(p){
       <div class="card-body">
         <div class="card-top">
           <div class="card-title">${escapeHtml(p.name)}</div>
-          <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-            <span class="cat-pill">${escapeHtml(categoryLabel(p))}</span>
-            ${p.price ? `<span class="cat-pill price-pill">${'$'.repeat(p.price)}</span>` : ''}
-          </div>
+          <span class="cat-pill">${escapeHtml(categoryLabel(p))}</span>
         </div>
+        ${p.price ? `<div>${priceHtml(p.price)}</div>` : ''}
         ${currentTripId===ALL_TRIPS_ID ? `<div class="addr">🧭 ${escapeHtml(tripName(p.tripId))}</div>` : ''}
         ${p.suggestedBy ? `<div class="addr">🙋 Suggested by ${escapeHtml(travelerName(p.suggestedBy))}</div>` : ''}
         ${p.address ? `<div class="addr">📍 ${escapeHtml(p.address)}</div>` : ''}
