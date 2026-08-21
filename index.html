@@ -1070,19 +1070,6 @@ function loadImageSafe(src){
   });
 }
 
-let headerBadgePromise = null;
-function loadHeaderBadge(){
-  if(!headerBadgePromise){
-    headerBadgePromise = new Promise((resolve)=>{
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = 'share-badge.png';
-    });
-  }
-  return headerBadgePromise;
-}
-
 let footerIconPromise = null;
 function loadFooterIcon(){
   if(!footerIconPromise){
@@ -1122,130 +1109,178 @@ async function buildShareCardBlob(p){
     await document.fonts.ready;
   }catch(e){ /* fonts may still render with fallback */ }
 
+  const heroH = 620;
+  const pad = 56;
+
   // Background
   ctx.fillStyle = '#F2E6C9';
   ctx.fillRect(0, 0, W, H);
-
-  // Sparkle star accents, echoing the header artwork
-  drawSparkleStar(ctx, 66, 52, 22, '#E8604C');
-  drawSparkleStar(ctx, 112, 78, 13, '#136158');
-
-  // Outer border
-  ctx.strokeStyle = '#2B2620';
-  ctx.lineWidth = 10;
-  roundedRectPath(ctx, 14, 14, W-28, H-28, 22);
-  ctx.stroke();
 
   let photoImg = null;
   if(p.photo){
     try{ photoImg = await loadImageSafe(p.photo); }catch(e){ photoImg = null; }
   }
-
-  const watermarkIcon = await loadHeaderBadge();
-
-  const pad = 56;
   const hasPhoto = !!photoImg;
-  const titleFont = hasPhoto ? 46 : 58;
-  const notesMaxLines = hasPhoto ? 2 : 3;
-  const badgeH = 92;
-  const badgeW = watermarkIcon ? badgeH * (watermarkIcon.naturalWidth / watermarkIcon.naturalHeight) : 0;
-  const textW = W - pad*2;
-  const titleTextW = watermarkIcon ? textW - badgeW - 24 : textW;
+  const footerIcon = await loadFooterIcon();
 
-  let cursorY = 96;
+  // ---- Hero zone ----
+  ctx.save();
+  roundedRectPath(ctx, 14, 14, W-28, heroH-14, 22);
+  ctx.clip();
 
-  // Photo panel (full width, stacked on top)
   if(hasPhoto){
-    const px = 48, py = 48, pw = W - 96, ph = 420;
-    ctx.save();
-    roundedRectPath(ctx, px, py, pw, ph, 14);
-    ctx.clip();
-    const scale = Math.max(pw/photoImg.width, ph/photoImg.height);
+    const scale = Math.max(W/photoImg.width, heroH/photoImg.height);
     const iw = photoImg.width*scale, ih = photoImg.height*scale;
-    ctx.drawImage(photoImg, px + (pw-iw)/2, py + (ph-ih)/2, iw, ih);
+    ctx.drawImage(photoImg, W/2 - iw/2, heroH/2 - ih/2, iw, ih);
+  } else {
+    ctx.fillStyle = '#1E8F86';
+    ctx.fillRect(0, 0, W, heroH);
+    ctx.save();
+    ctx.translate(W/2, heroH*0.42);
+    for(let i=0;i<24;i++){
+      ctx.rotate(Math.PI/12);
+      ctx.fillStyle = 'rgba(232,163,61,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,520,-0.045,0.045);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
+    if(footerIcon){
+      const iw2 = 400, ih2 = 400;
+      const ix = W/2 - iw2/2, iy = heroH*0.42 - ih2/2;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 26;
+      ctx.shadowOffsetY = 10;
+      ctx.fillStyle = '#F2E6C9';
+      roundedRectPath(ctx, ix-18, iy-18, iw2+36, ih2+36, 20);
+      ctx.fill();
+      ctx.restore();
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = '#2B2620';
+      roundedRectPath(ctx, ix-18, iy-18, iw2+36, ih2+36, 20);
+      ctx.stroke();
+      ctx.drawImage(footerIcon, ix, iy, iw2, ih2);
+    }
+  }
+  ctx.restore();
+
+  // Outer border + hero/content divider
+  ctx.strokeStyle = '#2B2620';
+  ctx.lineWidth = 10;
+  roundedRectPath(ctx, 14, 14, W-28, H-28, 22);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(14, heroH);
+  ctx.lineTo(W-14, heroH);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#2B2620';
+  ctx.stroke();
+
+  drawSparkleStar(ctx, 66, 52, 20, '#E8604C');
+  drawSparkleStar(ctx, 108, 76, 12, hasPhoto ? '#E8604C' : '#F2E6C9');
+
+  // ---- Rating seal, overlapping hero/content boundary ----
+  const showSeal = p.status === 'visited' && !!p.rating;
+  if(showSeal){
+    const cx = 150, cy = heroH, r = 96;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.fillStyle = '#E8604C';
+    ctx.fill();
+    ctx.lineWidth = 8;
     ctx.strokeStyle = '#2B2620';
-    ctx.lineWidth = 6;
-    roundedRectPath(ctx, px, py, pw, ph, 14);
     ctx.stroke();
-    cursorY = py + ph + 44;
+    ctx.restore();
+    ctx.fillStyle = '#F2E6C9';
+    ctx.textAlign = 'center';
+    ctx.font = '700 44px "Alfa Slab One"';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.rating.toFixed(1), cx, cy-8);
+    ctx.font = '700 15px "Space Mono"';
+    ctx.fillText('★'.repeat(Math.round(p.rating)), cx, cy+20);
+    ctx.font = '700 12px "Space Mono"';
+    ctx.fillText('VISITED', cx, cy+42);
+    ctx.textAlign = 'left';
   }
 
-  // Icon badge to the right of the place name, drawn at its true aspect ratio
-  if(watermarkIcon){
-    ctx.drawImage(watermarkIcon, W - pad - badgeW, cursorY - 6, badgeW, badgeH);
-  }
-
-  // Title, with a white halo behind it like the header wordmark
-  ctx.fillStyle = '#2C5C64';
-  ctx.font = `700 ${titleFont}px "Alfa Slab One"`;
+  // ---- Content below hero ----
+  const contentX = showSeal ? 230 : pad;
+  const textW = W - contentX - pad;
+  let cursorY = heroH + 34;
   ctx.textBaseline = 'top';
-  cursorY = wrapCanvasText(ctx, p.name, pad, cursorY, titleTextW, titleFont+4, 2, '#FFFDF6', 7);
-  cursorY += 14;
 
-  // Coral two-part pill, matching the header's "SHARED LOG · EST. 2026" badge
-  ctx.font = '700 19px "Space Mono"';
+  ctx.fillStyle = '#2C5C64';
+  ctx.font = '700 50px "Alfa Slab One"';
+  cursorY = wrapCanvasText(ctx, p.name, contentX, cursorY, textW, 54, 2, '#FFFDF6', 6);
+  cursorY += 10;
+
+  ctx.font = '700 18px "Space Mono"';
   const trip = trips.find(t=>t.id===p.tripId);
   let pillText = categoryLabel(p).toUpperCase() + '  ·  ' + (trip ? trip.name.toUpperCase() : 'WAYPOINTS');
   if(p.price) pillText += '  ·  ' + '$'.repeat(p.price);
-  const pillW = ctx.measureText(pillText).width + 36;
+  const pillW = ctx.measureText(pillText).width + 32;
   ctx.fillStyle = '#E8604C';
-  roundedRectPath(ctx, pad, cursorY, pillW, 40, 8);
+  roundedRectPath(ctx, contentX, cursorY, pillW, 36, 8);
   ctx.fill();
   ctx.strokeStyle = '#2B2620'; ctx.lineWidth = 2;
-  roundedRectPath(ctx, pad, cursorY, pillW, 40, 8);
+  roundedRectPath(ctx, contentX, cursorY, pillW, 36, 8);
   ctx.stroke();
   ctx.fillStyle = '#F2E6C9';
-  ctx.fillText(pillText, pad+18, cursorY+10);
+  ctx.fillText(pillText, contentX+16, cursorY+9);
   cursorY += 60;
 
-  // Status + rating
-  ctx.font = '700 24px "Space Mono"';
-  if(p.status === 'visited'){
-    ctx.fillStyle = '#1f5c27';
-    ctx.fillText('VISITED', pad, cursorY);
-    if(p.rating){
-      const rounded = Math.round(p.rating);
-      ctx.fillStyle = '#E8A33D';
-      ctx.font = '30px "Poppins"';
-      ctx.fillText('★'.repeat(rounded) + '☆'.repeat(5-rounded) + '  ' + p.rating + '/5', pad+160, cursorY-3);
-    }
-  } else {
-    ctx.fillStyle = '#E8604C';
-    ctx.fillText('WANT TO GO', pad, cursorY);
+  if(!showSeal){
+    // status line still shown when there's no seal (want-to-go, or visited w/o rating)
+    ctx.font = '700 24px "Space Mono"';
+    ctx.fillStyle = p.status === 'visited' ? '#1f5c27' : '#E8604C';
+    ctx.fillText(p.status === 'visited' ? 'VISITED' : 'WANT TO GO', contentX, cursorY);
+    cursorY += 44;
   }
-  cursorY += 50;
 
   // Address / phone / suggested-by
-  ctx.font = '400 25px "Poppins"';
+  ctx.font = '400 24px "Poppins"';
   ctx.fillStyle = '#2B2620';
   const infoLines = [];
   if(p.address || p.city) infoLines.push('📍 ' + [p.address, p.city].filter(Boolean).join(', '));
   if(p.phone) infoLines.push('📞 ' + p.phone);
   if(p.suggestedBy) infoLines.push('🙋 Suggested by ' + travelerName(p.suggestedBy));
   infoLines.forEach(line=>{
-    cursorY = wrapCanvasText(ctx, line, pad, cursorY, textW, 32, 1) + 6;
+    cursorY = wrapCanvasText(ctx, line, contentX, cursorY, textW, 30, 1) + 6;
   });
-  cursorY += 10;
+  cursorY += 8;
 
   // Notes
   if(p.notes){
-    ctx.font = 'italic 24px "Poppins"';
+    ctx.font = 'italic 23px "Poppins"';
     ctx.fillStyle = '#4A473F';
-    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, textW, 32, notesMaxLines);
+    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, W - pad*2, 30, hasPhoto ? 2 : 3);
   }
 
-  // Footer stamp — small icon watermark, falling back to a sparkle star if it can't load
-  const footerIcon = await loadFooterIcon();
-  ctx.font = '700 19px "Space Mono"';
-  ctx.fillStyle = '#136158';
+  // ---- Bottom CTA ribbon ----
+  const ribbonH = 92;
+  const ribbonY = H - 14 - ribbonH;
+  ctx.fillStyle = '#E8604C';
+  ctx.fillRect(14, ribbonY, W-28, ribbonH);
+  ctx.beginPath();
+  ctx.moveTo(14, ribbonY);
+  ctx.lineTo(W-14, ribbonY);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#2B2620';
+  ctx.stroke();
+
   if(footerIcon){
-    const iconSize = 52;
-    ctx.drawImage(footerIcon, pad, H - 48 - iconSize/2, iconSize, iconSize);
-    ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad + iconSize + 14, H - 56);
-  } else {
-    drawSparkleStar(ctx, pad+8, H-48, 9, '#E8604C');
-    ctx.fillText('WAYPOINTS · SHARED TRAVEL LOG', pad+26, H - 56);
+    const bH = 56;
+    ctx.drawImage(footerIcon, pad, ribbonY + (ribbonH-bH)/2, bH, bH);
+    ctx.fillStyle = '#F2E6C9';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 21px "Space Mono"';
+    ctx.fillText('SAVED WITH WAYPOINTS', pad + bH + 18, ribbonY + ribbonH/2 - 13);
+    ctx.font = '700 21px "Space Mono"';
+    ctx.fillText('hunterappstudio.com   ·   hunterappstudio@gmail.com', pad + bH + 18, ribbonY + ribbonH/2 + 16);
   }
 
   return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
