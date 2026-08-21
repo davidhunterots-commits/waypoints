@@ -1094,7 +1094,7 @@ function roundedRectPath(ctx, x, y, w, h, r){
 }
 
 async function buildShareCardBlob(p){
-  const W = 1080, H = 1080;
+  const W = 1080, H = 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -1109,7 +1109,7 @@ async function buildShareCardBlob(p){
     await document.fonts.ready;
   }catch(e){ /* fonts may still render with fallback */ }
 
-  const heroH = 620;
+  const heroH = 890;
   const pad = 56;
 
   // Background
@@ -1148,7 +1148,7 @@ async function buildShareCardBlob(p){
     }
     ctx.restore();
     if(footerIcon){
-      const iw2 = 400, ih2 = 400;
+      const iw2 = 460, ih2 = 460;
       const ix = W/2 - iw2/2, iy = heroH*0.42 - ih2/2;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.35)';
@@ -1283,7 +1283,7 @@ async function buildShareCardBlob(p){
     ctx.fillText('hunterappstudio.com   ·   hunterappstudio@gmail.com', pad + bH + 18, ribbonY + ribbonH/2 + 16);
   }
 
-  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
 }
 
 async function sharePlace(id){
@@ -1312,7 +1312,7 @@ async function sharePlace(id){
     const blob = await buildShareCardBlob(p);
     if(blob){
       const safeName = (p.name || 'place').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      file = new File([blob], safeName + '.png', { type: 'image/png' });
+      file = new File([blob], safeName + '.jpg', { type: 'image/jpeg' });
     }
   }catch(e){ console.error('Share card build failed', e); }
 
