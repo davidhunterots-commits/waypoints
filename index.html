@@ -1094,7 +1094,32 @@ function roundedRectPath(ctx, x, y, w, h, r){
 }
 
 async function buildShareCardBlob(p){
-  const W = 1080, H = 1350;
+  const W = 1080;
+  const heroH = 890;
+  const pad = 56;
+  const ribbonH = 128;
+
+  // Figure out how much content-area height we actually need, so nothing can
+  // ever get clipped/overlapped by the bottom ribbon — the ribbon position is
+  // derived from real content height, not a fixed guess.
+  const hasPhotoForSizing = !!p.photo;
+  const showSealForSizing = p.status === 'visited' && !!p.rating;
+  const infoLineCount = ((p.address || p.city) ? 1 : 0) + (p.phone ? 1 : 0) + (p.suggestedBy ? 1 : 0);
+  const notesMaxLinesForSizing = hasPhotoForSizing ? 2 : 3;
+
+  let neededContentH = 0;
+  neededContentH += 2 * 62;      // title, worst case 2 lines
+  neededContentH += 10;          // gap after title
+  neededContentH += 60;          // category/trip/price pill row
+  if(!showSealForSizing) neededContentH += 44; // status line only shown without the rating seal
+  neededContentH += infoLineCount * 36; // address / phone / suggested-by, one line each
+  neededContentH += 10;          // gap before notes
+  if(p.notes) neededContentH += notesMaxLinesForSizing * 30; // notes, worst case
+  neededContentH += 40;          // breathing room before the ribbon
+
+  const minH = 1350;
+  const H = Math.max(minH, heroH + neededContentH + ribbonH + 28);
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -1108,9 +1133,6 @@ async function buildShareCardBlob(p){
     ]);
     await document.fonts.ready;
   }catch(e){ /* fonts may still render with fallback */ }
-
-  const heroH = 890;
-  const pad = 56;
 
   // Background
   ctx.fillStyle = '#F2E6C9';
@@ -1261,7 +1283,6 @@ async function buildShareCardBlob(p){
   }
 
   // ---- Bottom CTA ribbon ----
-  const ribbonH = 128;
   const ribbonY = H - 14 - ribbonH;
   ctx.fillStyle = '#E8604C';
   ctx.fillRect(14, ribbonY, W-28, ribbonH);
@@ -1316,27 +1337,39 @@ async function sharePlace(id){
     }
   }catch(e){ console.error('Share card build failed', e); }
 
-  if(file && navigator.canShare && navigator.canShare({ files: [file] })){
-    try{ await navigator.share({ title: p.name, text, files: [file] }); return; }
-    catch(e){ /* cancelled or unsupported — fall through */ }
-  }
-  if(navigator.share){
-    try{ await navigator.share({ title: p.name, text }); return; }
-    catch(e){ /* cancelled or unsupported — fall through to clipboard/download */ }
-  }
-
   if(file){
+    // Try sharing the actual image directly — attempt this even if canShare()
+    // wasn't fully confident, since some browsers under-report file support.
+    if(navigator.share){
+      try{ await navigator.share({ title: p.name, text, files: [file] }); return; }
+      catch(e){ /* cancelled, or this device truly can't share files — fall through */ }
+    }
+    // Never fall back to a text-only share here — sharing just the text (which
+    // includes a map link) causes Facebook/etc. to render an auto map-preview
+    // card instead of our actual designed image. Download + copy instead, so
+    // the person still gets the real card to attach manually.
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url; a.download = file.name;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
+    try{
+      await navigator.clipboard.writeText(text);
+      alert('Downloaded a shareable card image for "' + p.name + '" and copied the caption to your clipboard — attach the image and paste the caption when you post.');
+    }catch(e){
+      alert('Downloaded a shareable card image for "' + p.name + '". Caption:\n\n' + text);
+    }
+    return;
+  }
+
+  // No image at all (card build failed) — text-only is the only option left
+  if(navigator.share){
+    try{ await navigator.share({ title: p.name, text }); return; }
+    catch(e){ /* cancelled or unsupported — fall through to clipboard */ }
   }
   try{
     await navigator.clipboard.writeText(text);
-    alert(file
-      ? 'Downloaded a shareable card image for "' + p.name + '" and copied the details to your clipboard.'
-      : 'Copied "' + p.name + '" to your clipboard — paste it anywhere to share.');
+    alert('Copied "' + p.name + '" to your clipboard — paste it anywhere to share.');
   }catch(e){
     alert(text);
   }
