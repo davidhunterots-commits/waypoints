@@ -1331,10 +1331,12 @@ async function sharePlace(id){
   const locLine = [p.city, p.address].filter(Boolean).join(' · ');
   if(locLine) lines.push(locLine);
   if(p.notes) lines.push(p.notes);
-  lines.push(mapUrl(p));
-  if(p.website) lines.push(p.website);
-  if(p.social) lines.push(p.social);
-  let text = lines.join('\n');
+  let caption = lines.join('\n');
+
+  const linkLines = [mapUrl(p)];
+  if(p.website) linkLines.push(p.website);
+  if(p.social) linkLines.push(p.social);
+  const linksBlock = linkLines.join('\n');
 
   let file = null;
   let photoFailedToLoad = false;
@@ -1348,44 +1350,52 @@ async function sharePlace(id){
   }catch(e){ console.error('Share card build failed', e); }
 
   if(photoFailedToLoad){
-    text += '\n\n(Note: your photo link couldn\'t be included — that site blocks this. The card was made without it.)';
+    caption += '\n\n(Note: your photo link couldn\'t be included — that site blocks this. The card was made without it.)';
   }
 
   if(file){
     // Try sharing the actual image directly — attempt this even if canShare()
     // wasn't fully confident, since some browsers under-report file support.
+    // Deliberately using `caption` (no URLs) here: a map/website link in the
+    // share text causes Facebook and similar apps to auto-generate their own
+    // link-preview card, which then overrides or buries our actual designed
+    // image — the location is already shown visually on the card itself.
     if(navigator.share){
-      try{ await navigator.share({ title: p.name, text, files: [file] }); return; }
+      try{ await navigator.share({ title: p.name, text: caption, files: [file] }); return; }
       catch(e){ /* cancelled, or this device truly can't share files — fall through */ }
     }
     // Never fall back to a text-only share here — sharing just the text (which
-    // includes a map link) causes Facebook/etc. to render an auto map-preview
-    // card instead of our actual designed image. Download + copy instead, so
-    // the person still gets the real card to attach manually.
+    // would include a map link) causes Facebook/etc. to render an auto map-
+    // preview card instead of our actual designed image. Download + copy
+    // instead, so the person still gets the real card to attach manually.
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url; a.download = file.name;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
+    const downloadCaption = caption + '\n\n' + linksBlock;
     try{
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(downloadCaption);
       alert('Downloaded a shareable card image for "' + p.name + '" and copied the caption to your clipboard — attach the image and paste the caption when you post.');
     }catch(e){
-      alert('Downloaded a shareable card image for "' + p.name + '". Caption:\n\n' + text);
+      alert('Downloaded a shareable card image for "' + p.name + '". Caption:\n\n' + downloadCaption);
     }
     return;
   }
 
-  // No image at all (card build failed) — text-only is the only option left
+  // No image at all (card build failed) — text-only is the only option left,
+  // so the map/website links are worth including here since there's no
+  // image for them to compete with.
+  const fullText = caption + '\n\n' + linksBlock;
   if(navigator.share){
-    try{ await navigator.share({ title: p.name, text }); return; }
+    try{ await navigator.share({ title: p.name, text: fullText }); return; }
     catch(e){ /* cancelled or unsupported — fall through to clipboard */ }
   }
   try{
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(fullText);
     alert('Copied "' + p.name + '" to your clipboard — paste it anywhere to share.');
   }catch(e){
-    alert(text);
+    alert(fullText);
   }
 }
 
