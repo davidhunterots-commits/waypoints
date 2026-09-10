@@ -164,14 +164,22 @@
   .city-select{
     font-family:'Space Mono', monospace;
     font-size:11px; letter-spacing:.03em; font-weight:700;
-    padding:8px 10px; border-radius:6px;
-    border:2px solid var(--ink); background:var(--cream); color:var(--ink); cursor:pointer;
+    padding:8px 26px 8px 10px; border-radius:6px;
+    border:2px solid var(--ink); background-color:var(--cream); color:var(--ink); cursor:pointer;
     box-shadow: 3px 3px 0 var(--ink);
+    -webkit-appearance:none; -moz-appearance:none; appearance:none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%232B2620'/></svg>");
+    background-repeat:no-repeat;
+    background-position: right 10px center;
+    background-size:10px 6px;
   }
-  .select-trip{ background:var(--turquoise); border-color:var(--ink); color:var(--cream); }
-  .select-category{ background:var(--coral); border-color:var(--ink); color:var(--cream); }
-  .select-status{ background:var(--mustard); border-color:var(--ink); color:var(--ink); }
-  .select-city{ background:var(--turquoise); border-color:var(--ink); color:var(--cream); }
+  .select-trip{ background-color:var(--turquoise); border-color:var(--ink); color:var(--cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23F2E6C9'/></svg>"); }
+  .select-category{ background-color:var(--coral); border-color:var(--ink); color:var(--cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23F2E6C9'/></svg>"); }
+  .select-status{ background-color:var(--mustard); border-color:var(--ink); color:var(--ink); }
+  .select-city{ background-color:var(--turquoise); border-color:var(--ink); color:var(--cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%23F2E6C9'/></svg>"); }
 
   /* City header — postcard banner style */
   .city-group{ margin-bottom:30px; }
