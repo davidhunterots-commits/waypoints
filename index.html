@@ -1047,6 +1047,23 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines, haloCol
   return y + lines.length*lineHeight;
 }
 
+function countWrappedLines(ctx, text, maxWidth){
+  const words = (text||'').split(/\s+/).filter(Boolean);
+  if(!words.length) return 0;
+  let line = '', lines = 0;
+  for(let i=0;i<words.length;i++){
+    const test = line ? line + ' ' + words[i] : words[i];
+    if(ctx.measureText(test).width > maxWidth && line){
+      lines++;
+      line = words[i];
+    } else {
+      line = test;
+    }
+  }
+  if(line) lines++;
+  return lines;
+}
+
 function drawSparkleStar(ctx, cx, cy, size, color){
   ctx.save();
   ctx.translate(cx, cy);
@@ -1104,22 +1121,46 @@ async function buildShareCardBlob(p){
   const pad = 56;
   const ribbonH = 128;
 
+  try{
+    await Promise.all([
+      document.fonts.load('700 58px "Alfa Slab One"'),
+      document.fonts.load('700 24px "Space Mono"'),
+      document.fonts.load('600 30px "Poppins"'),
+      document.fonts.load('400 27px "Poppins"'),
+      document.fonts.load('italic 27px "Poppins"')
+    ]);
+    await document.fonts.ready;
+  }catch(e){ /* fonts may still render with fallback */ }
+
   // Figure out how much content-area height we actually need, so nothing can
-  // ever get clipped/overlapped by the bottom ribbon — the ribbon position is
-  // derived from real content height, not a fixed guess.
-  const hasPhotoForSizing = !!p.photo;
+  // ever get clipped/overlapped by the bottom ribbon, and long notes never get
+  // truncated — measured against the real text, not a worst-case guess.
   const showSealForSizing = p.status === 'visited' && !!p.rating;
   const infoLineCount = ((p.address || p.city) ? 1 : 0) + (p.phone ? 1 : 0) + (p.suggestedBy ? 1 : 0);
-  const notesMaxLinesForSizing = hasPhotoForSizing ? 2 : 3;
+
+  const scratch = document.createElement('canvas');
+  scratch.width = W; scratch.height = 10;
+  const sctx = scratch.getContext('2d');
+
+  const titleAreaW = showSealForSizing ? (W - 300 - pad) : (W - pad*2);
+  sctx.font = '700 58px "Alfa Slab One"';
+  const titleLines = Math.min(2, Math.max(1, countWrappedLines(sctx, p.name, titleAreaW)));
+
+  let notesLines = 0;
+  if(p.notes){
+    sctx.font = 'italic 27px "Poppins"';
+    notesLines = countWrappedLines(sctx, p.notes, W - pad*2);
+  }
 
   let neededContentH = 0;
-  neededContentH += 2 * 62;      // title, worst case 2 lines
+  neededContentH += 34;          // gap between hero bottom and title start (matches real draw start position)
+  neededContentH += titleLines * 62;
   neededContentH += 10;          // gap after title
   neededContentH += 60;          // category/trip/price pill row
   if(!showSealForSizing) neededContentH += 44; // status line only shown without the rating seal
-  neededContentH += infoLineCount * 36; // address / phone / suggested-by, one line each
+  neededContentH += infoLineCount * 38; // address / phone / suggested-by, one line each
   neededContentH += 10;          // gap before notes
-  if(p.notes) neededContentH += notesMaxLinesForSizing * 30; // notes, worst case
+  neededContentH += notesLines * 34; // notes, full length, never truncated
   neededContentH += 40;          // breathing room before the ribbon
 
   const minH = 1350;
@@ -1128,16 +1169,6 @@ async function buildShareCardBlob(p){
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-
-  try{
-    await Promise.all([
-      document.fonts.load('700 52px "Alfa Slab One"'),
-      document.fonts.load('700 24px "Space Mono"'),
-      document.fonts.load('600 26px "Poppins"'),
-      document.fonts.load('400 24px "Poppins"')
-    ]);
-    await document.fonts.ready;
-  }catch(e){ /* fonts may still render with fallback */ }
 
   // Background
   ctx.fillStyle = '#F2E6C9';
@@ -1270,22 +1301,23 @@ async function buildShareCardBlob(p){
   }
 
   // Address / phone / suggested-by
-  ctx.font = '400 24px "Poppins"';
+  ctx.font = '600 30px "Poppins"';
   ctx.fillStyle = '#2B2620';
   const infoLines = [];
   if(p.address || p.city) infoLines.push('📍 ' + [p.address, p.city].filter(Boolean).join(', '));
   if(p.phone) infoLines.push('📞 ' + p.phone);
   if(p.suggestedBy) infoLines.push('🙋 Suggested by ' + travelerName(p.suggestedBy));
   infoLines.forEach(line=>{
-    cursorY = wrapCanvasText(ctx, line, contentX, cursorY, textW, 30, 1) + 6;
+    cursorY = wrapCanvasText(ctx, line, contentX, cursorY, textW, 38, 1) + 8;
   });
-  cursorY += 8;
+  cursorY += 10;
 
-  // Notes
+  // Notes — no line cap, so long notes are never truncated (the canvas height
+  // above was already measured to fit the full text)
   if(p.notes){
-    ctx.font = 'italic 23px "Poppins"';
+    ctx.font = 'italic 27px "Poppins"';
     ctx.fillStyle = '#4A473F';
-    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, W - pad*2, 30, hasPhoto ? 2 : 3);
+    cursorY = wrapCanvasText(ctx, p.notes, pad, cursorY, W - pad*2, 34, 999);
   }
 
   // ---- Bottom CTA ribbon ----
