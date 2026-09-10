@@ -317,8 +317,7 @@
       <option value="All">All cities</option>
     </select>
     <button class="add-btn" onclick="addPlaceClicked()">+ Add place</button>
-    <button class="btn-secondary btn-pill" onclick="exportData()" title="Download your list as a file">⬇ Export</button>
-    <button class="btn-secondary btn-pill" onclick="document.getElementById('import-file').click()" title="Load a previously exported file">⬆ Import</button>
+    <button class="btn-secondary btn-pill" onclick="openDataModal()" title="Export or import your data">⇅ Export / Import</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
   </div>
 
@@ -449,6 +448,20 @@
     <div class="modal-actions">
       <button class="btn-secondary" onclick="resolveConfirm(false)">Cancel</button>
       <button class="btn-primary" onclick="resolveConfirm(true)">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="data-overlay">
+  <div class="modal" style="max-width:360px;">
+    <h2>Export / Import</h2>
+    <div class="field-hint" style="text-transform:none; margin-bottom:16px;">Save a backup file, or load one back in.</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn-secondary btn-pill" style="width:100%;" onclick="exportData(); closeDataModal();">⬇ Export — download a backup file</button>
+      <button class="btn-secondary btn-pill" style="width:100%;" onclick="closeDataModal(); document.getElementById('import-file').click();">⬆ Import — load a backup file</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeDataModal()">Close</button>
     </div>
   </div>
 </div>
@@ -798,6 +811,13 @@ async function initFirebaseSync(){
 }
 
 let _confirmResolve = null;
+function openDataModal(){
+  document.getElementById('data-overlay').classList.add('open');
+}
+function closeDataModal(){
+  document.getElementById('data-overlay').classList.remove('open');
+}
+
 function showConfirm(message){
   document.getElementById('confirm-message').textContent = message;
   document.getElementById('confirm-overlay').classList.add('open');
