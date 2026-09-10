@@ -295,20 +295,19 @@
   </div>
 
   <div class="trip-bar">
-    <div class="tabs" id="trip-tabs"></div>
-    <button class="btn-secondary" onclick="openTripModal()">+ New trip</button>
-    <button class="btn-secondary" id="manage-travelers-btn" onclick="openTripModal(getCurrentTrip())">✎ Manage travelers</button>
+    <select class="city-select" id="trip-tabs" onchange="handleTripSelectChange(this.value)"></select>
+    <button class="btn-secondary" id="manage-travelers-btn" onclick="openTripModal(getCurrentTrip())">✎ Manage trip</button>
     <button class="btn-secondary" onclick="openTravelersModal()">👥 All travelers</button>
   </div>
   <div class="traveler-row" id="traveler-row"></div>
 
   <div class="controls">
-    <div class="tabs" id="cat-tabs"></div>
-    <div class="spacer"></div>
-    <div class="tabs" id="status-tabs"></div>
+    <select class="city-select" id="cat-tabs" onchange="setCategory(this.value)"></select>
+    <select class="city-select" id="status-tabs" onchange="setStatusFilter(this.value)"></select>
     <select class="city-select" id="city-select" onchange="setCityFilter(this.value)">
       <option value="All">All cities</option>
     </select>
+    <div class="spacer"></div>
     <button class="add-btn" onclick="addPlaceClicked()">+ Add place</button>
     <button class="btn-secondary" onclick="exportData()" title="Download your list as a file">⬇ Export</button>
     <button class="btn-secondary" onclick="document.getElementById('import-file').click()" title="Load a previously exported file">⬆ Import</button>
@@ -808,10 +807,20 @@ function tripName(id){ const t = trips.find(x=>x.id===id); return t ? t.name : '
 
 function renderTripTabs(){
   const el = document.getElementById('trip-tabs');
-  const allTab = `<button class="tab ${currentTripId===ALL_TRIPS_ID?'active':''}" onclick="setTrip('${ALL_TRIPS_ID}')">All trips</button>`;
-  el.innerHTML = allTab + trips.map(t =>
-    `<button class="tab ${t.id===currentTripId?'active':''}" onclick="setTrip('${t.id}')">${escapeHtml(t.name)}</button>`
-  ).join('');
+  const options = [`<option value="${ALL_TRIPS_ID}">All Trips</option>`]
+    .concat(trips.map(t => `<option value="${escapeAttr(t.id)}">${escapeHtml(t.name)}</option>`))
+    .concat([`<option value="__new__">+ New trip…</option>`]);
+  el.innerHTML = options.join('');
+  el.value = currentTripId;
+}
+
+function handleTripSelectChange(value){
+  if(value === '__new__'){
+    document.getElementById('trip-tabs').value = currentTripId; // snap back until the new trip is saved
+    openTripModal();
+    return;
+  }
+  setTrip(value);
 }
 
 function setTrip(id){
@@ -963,14 +972,22 @@ async function removeGlobalTraveler(id){
 
 function renderTabs(){
   const catTabs = document.getElementById('cat-tabs');
-  catTabs.innerHTML = CATEGORIES.map(c =>
-    `<button class="tab ${c===currentCategory?'active':''}" onclick="setCategory('${c}')">${c}</button>`
-  ).join('');
+  const inTrip = currentTripId===ALL_TRIPS_ID ? places : places.filter(p => (p.tripId||'') === currentTripId);
+  const otherLabels = [...new Set(
+    inTrip.filter(p => p.category === 'Other' && (p.categoryOther||'').trim())
+          .map(p => p.categoryOther.trim())
+  )].sort((a,b)=>a.localeCompare(b));
+  const baseOptions = CATEGORIES.map(c => `<option value="${escapeAttr(c)}">${c==='All' ? 'All categories' : c}</option>`);
+  const otherOptions = otherLabels.map(label => `<option value="other:${escapeAttr(label)}">${escapeHtml(label)}</option>`);
+  catTabs.innerHTML = baseOptions.concat(otherOptions).join('');
+  if(currentCategory.startsWith('other:') && !otherLabels.includes(currentCategory.slice(6))){
+    currentCategory = 'All'; // the label this was filtering on no longer exists
+  }
+  catTabs.value = currentCategory;
 
   const statusTabs = document.getElementById('status-tabs');
-  statusTabs.innerHTML = STATUS_FILTERS.map(s =>
-    `<button class="tab ${s===currentStatusFilter?'active':''}" onclick="setStatusFilter('${s}')">${s}</button>`
-  ).join('');
+  statusTabs.innerHTML = STATUS_FILTERS.map(s => `<option value="${escapeAttr(s)}">${s==='All' ? 'All statuses' : s}</option>`).join('');
+  statusTabs.value = currentStatusFilter;
 }
 function setCategory(c){ currentCategory = c; renderTabs(); renderGrid(); }
 function setStatusFilter(s){ currentStatusFilter = s; renderTabs(); renderGrid(); }
@@ -1479,7 +1496,11 @@ function renderGrid(){
 
   let filtered = places.filter(p=>{
     const tripOk = currentTripId===ALL_TRIPS_ID || (p.tripId||'') === currentTripId;
-    const catOk = currentCategory==='All' || p.category===currentCategory;
+    let catOk;
+    if(currentCategory === 'All') catOk = true;
+    else if(currentCategory.startsWith('other:')) catOk = p.category === 'Other' && (p.categoryOther||'').trim() === currentCategory.slice(6);
+    else if(currentCategory === 'Other') catOk = p.category === 'Other' && !(p.categoryOther||'').trim();
+    else catOk = p.category === currentCategory;
     const statOk = currentStatusFilter==='All' ||
       (currentStatusFilter==='Visited' && p.status==='visited') ||
       (currentStatusFilter==='Want to go' && p.status==='want');
