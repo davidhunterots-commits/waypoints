@@ -92,10 +92,12 @@
     font-family:'Space Mono', monospace;
     font-size:12px; letter-spacing:.03em; font-weight:700;
     background:var(--coral); color:var(--cream); border:2px solid var(--ink);
-    padding:10px 16px; border-radius:6px; cursor:pointer;
+    padding:10px 18px; border-radius:999px; cursor:pointer;
     box-shadow: 3px 3px 0 var(--ink);
   }
   .add-btn:active{ box-shadow:1px 1px 0 var(--ink); transform:translate(2px,2px); }
+  .btn-secondary.btn-pill{ border-radius:999px; padding:9px 18px; }
+  .btn-secondary.btn-travelers{ background:var(--mustard); color:var(--ink); }
 
   /* Grid */
   .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; }
@@ -164,7 +166,12 @@
     font-size:11px; letter-spacing:.03em; font-weight:700;
     padding:8px 10px; border-radius:6px;
     border:2px solid var(--ink); background:var(--cream); color:var(--ink); cursor:pointer;
+    box-shadow: 3px 3px 0 var(--ink);
   }
+  .select-trip{ background:var(--turquoise); border-color:var(--ink); color:var(--cream); }
+  .select-category{ background:var(--coral); border-color:var(--ink); color:var(--cream); }
+  .select-status{ background:var(--mustard); border-color:var(--ink); color:var(--ink); }
+  .select-city{ background:var(--turquoise); border-color:var(--ink); color:var(--cream); }
 
   /* City header — postcard banner style */
   .city-group{ margin-bottom:30px; }
@@ -256,7 +263,9 @@
   .btn-secondary{
     background:var(--cream); border:2px solid var(--ink); color:var(--ink); padding:9px 14px; border-radius:6px;
     cursor:pointer; font-family:'Space Mono',monospace; font-size:11.5px; font-weight:700;
+    box-shadow: 3px 3px 0 var(--ink);
   }
+  .btn-secondary:active{ box-shadow:1px 1px 0 var(--ink); transform:translate(2px,2px); }
   .btn-primary{
     background:var(--coral); border:2px solid var(--ink); color:var(--cream); padding:9px 16px; border-radius:6px;
     cursor:pointer; font-family:'Space Mono',monospace; font-size:11.5px; font-weight:700;
@@ -295,22 +304,21 @@
   </div>
 
   <div class="trip-bar">
-    <select class="city-select" id="trip-tabs" onchange="handleTripSelectChange(this.value)"></select>
+    <select class="city-select select-trip" id="trip-tabs" onchange="handleTripSelectChange(this.value)"></select>
     <button class="btn-secondary" id="manage-travelers-btn" onclick="openTripModal(getCurrentTrip())">✎ Manage trip</button>
-    <button class="btn-secondary" onclick="openTravelersModal()">👥 All travelers</button>
+    <button class="btn-secondary btn-travelers btn-pill" onclick="openTravelersModal()">👥 All travelers</button>
   </div>
   <div class="traveler-row" id="traveler-row"></div>
 
   <div class="controls">
-    <select class="city-select" id="cat-tabs" onchange="setCategory(this.value)"></select>
-    <select class="city-select" id="status-tabs" onchange="setStatusFilter(this.value)"></select>
-    <select class="city-select" id="city-select" onchange="setCityFilter(this.value)">
+    <select class="city-select select-category" id="cat-tabs" onchange="setCategory(this.value)"></select>
+    <select class="city-select select-status" id="status-tabs" onchange="setStatusFilter(this.value)"></select>
+    <select class="city-select select-city" id="city-select" onchange="setCityFilter(this.value)">
       <option value="All">All cities</option>
     </select>
-    <div class="spacer"></div>
     <button class="add-btn" onclick="addPlaceClicked()">+ Add place</button>
-    <button class="btn-secondary" onclick="exportData()" title="Download your list as a file">⬇ Export</button>
-    <button class="btn-secondary" onclick="document.getElementById('import-file').click()" title="Load a previously exported file">⬆ Import</button>
+    <button class="btn-secondary btn-pill" onclick="exportData()" title="Download your list as a file">⬇ Export</button>
+    <button class="btn-secondary btn-pill" onclick="document.getElementById('import-file').click()" title="Load a previously exported file">⬆ Import</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
   </div>
 
